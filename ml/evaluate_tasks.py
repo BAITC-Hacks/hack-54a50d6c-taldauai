@@ -19,7 +19,7 @@ def compare_tasks(tasks: list[dict], expected: list[dict]) -> dict:
         text = task["description"].casefold()
         return (task["assignee_name"] == target["assignee_name"]
                 and task["due_date"] == target["due_date"]
-                and target["source"] in task["source_segment_ids"]
+                and ("source" not in target or target["source"] in task["source_segment_ids"])
                 and all(any(word in text for word in group.casefold().split("|"))
                         for group in target["keywords"]))
 

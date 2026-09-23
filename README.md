@@ -47,7 +47,7 @@ Backend отвечает за загрузку и хранение файлов,
 ## Установка и запуск ML-части
 
 Нужны Python 3.11/3.12, `ffmpeg`, локально скачанные веса ASR и диаризации,
-Ollama с импортированной KazLLM (`taldau-kazllm`) или `qwen2.5:7b`.
+Ollama с `qwen2.5:7b`. KazLLM используется как необязательная подсказка.
 На Linux с NVIDIA GPU можно установить CUDA и
 задать `TALDAU_DEVICE=cuda`; на macOS MVP работает на CPU.
 
@@ -65,7 +65,8 @@ export TALDAU_ASR_ENGINE=mixed-ctc
 export TALDAU_ASR_MODEL="$PWD/models/mixed-stt"
 export TALDAU_DIARIZATION_MODEL="$PWD/models/speaker-diarization-community-1"
 export TALDAU_DEVICE=cpu
-export TALDAU_LLM_MODEL=taldau-kazllm
+export TALDAU_LLM_MODEL=qwen2.5:7b
+python -m ml.doctor
 python -m ml ./data/meeting.wav --started-at '2026-09-23T14:00:00+05:00' --output ./data/result.json
 ```
 
@@ -104,7 +105,10 @@ python3.11 -m ml --help
 Условия доступа и лицензии весов проверяйте перед распространением сборки.
 
 Имена голосов и спорные сроки должен проверить человек. Подключение к
-Teams/Zoom/Meet, голосовая идентификация, PDF/DOCX и СЭД пока не реализованы.
+Teams/Zoom/Meet, голосовая идентификация, PDF и СЭД пока не реализованы.
+Локальный DOCX-экспорт: `python -m ml.export result.json --output protocol.docx`.
 Развёрнутой версии пока нет.
 
 Организационный план команды: [HACKATHON_PLAN.md](HACKATHON_PLAN.md).
+Исходные требования: [CASE_REQUIREMENTS.md](CASE_REQUIREMENTS.md).
+Проверка поручений и минутного совещания: [ML_RUN.md](ML_RUN.md#приёмка-по-тз-и-экспорт).

@@ -1,0 +1,128 @@
+{
+  "schema_version": "1.0",
+  "meeting_started_at": "2026-09-23T14:00:00+05:00",
+  "status": "completed",
+  "speakers": [
+    {
+      "id": "SPEAKER_00",
+      "display_name": null,
+      "suggested_name": "Айдана"
+    },
+    {
+      "id": "SPEAKER_01",
+      "display_name": null
+    }
+  ],
+  "segments": [
+    {
+      "id": "seg_0001",
+      "start_ms": 120,
+      "end_ms": 12176,
+      "text": "сәлеметсіздер ме әріптестер мен айданамын бүгін жұмыс жоспарын талқылаймыз данияр ертең договорды тексеріп заметани жіберіңіз бұл бірінші тапсырма",
+      "speaker_id": "SPEAKER_00",
+      "language": null
+    },
+    {
+      "id": "seg_0002",
+      "start_ms": 12616,
+      "end_ms": 14378,
+      "text": "құжаттың соңғы нұсқасы дайын",
+      "speaker_id": "SPEAKER_00",
+      "language": null
+    },
+    {
+      "id": "seg_0003",
+      "start_ms": 15579,
+      "end_ms": 16220,
+      "text": "здравствуйте",
+      "speaker_id": null,
+      "language": null
+    },
+    {
+      "id": "seg_0004",
+      "start_ms": 16620,
+      "end_ms": 24588,
+      "text": "коллеги я данир хорошо договор проверю завтра я отправлю замечание это подтверждение первой задачи айдана",
+      "speaker_id": "SPEAKER_01",
+      "language": null
+    },
+    {
+      "id": "seg_0005",
+      "start_ms": 24968,
+      "end_ms": 29236,
+      "text": "подготовьте отчёт до пятницы в отчёте нужны итоги закупок за месяц",
+      "speaker_id": "SPEAKER_01",
+      "language": null
+    },
+    {
+      "id": "seg_0006",
+      "start_ms": 30478,
+      "end_ms": 37972,
+      "text": "жақсы есепті жұмаға дейін дайындаймын бұл екінші тапсырма барлық мәліметтер бар жұмыс кестесі",
+      "speaker_id": "SPEAKER_00",
+      "language": null
+    },
+    {
+      "id": "seg_0007",
+      "start_ms": 38332,
+      "end_ms": 44399,
+      "text": "өзгерген жоқ қосымша сұрақтар болса бірге талқылаймыз қазір басқа тапсырма жоқ",
+      "speaker_id": "SPEAKER_00",
+      "language": null
+    },
+    {
+      "id": "seg_0008",
+      "start_ms": 45580,
+      "end_ms": 51788,
+      "text": "спасибо адана подтверждаю сроки договор проверю завтра отчёт ожидаем в пятницу",
+      "speaker_id": "SPEAKER_01",
+      "language": null
+    },
+    {
+      "id": "seg_0009",
+      "start_ms": 52268,
+      "end_ms": 58999,
+      "text": "старый документ уже отправлен вчера повторно отправлять его не нужно других поручений на этом совещании нет",
+      "speaker_id": "SPEAKER_01",
+      "language": null
+    }
+  ],
+  "tasks": [
+    {
+      "id": "task_0001",
+      "description": "данияр ертең договорды тексеріп заметани жіберіңіз",
+      "assignee_name": "Данияр",
+      "assignee_speaker_id": "SPEAKER_01",
+      "assigner_speaker_id": "SPEAKER_00",
+      "due_date": "2026-09-24",
+      "due_text": "ертең",
+      "source_segment_ids": [
+        "seg_0001",
+        "seg_0004",
+        "seg_0008"
+      ],
+      "needs_review": true,
+      "assignment_quote": "сәлеметсіздер ме әріптестер мен айданамын бүгін жұмыс жоспарын талқылаймыз данияр ертең договорды тексеріп заметани жіберіңіз бұл бірінші тапсырма"
+    },
+    {
+      "id": "task_0002",
+      "description": "подготовьте отчёт до пятницы в отчёте нужны итоги закупок за месяц",
+      "assignee_name": "Айдана",
+      "assignee_speaker_id": "SPEAKER_00",
+      "assigner_speaker_id": "SPEAKER_01",
+      "due_date": "2026-09-25",
+      "due_text": "жұмаға дейін",
+      "source_segment_ids": [
+        "seg_0005",
+        "seg_0007",
+        "seg_0008"
+      ],
+      "needs_review": true,
+      "assignment_quote": "подготовьте отчёт до пятницы в отчёте нужны итоги закупок за месяц"
+    }
+  ],
+  "summary": "Поручения по итогам совещания: Данияр — данияр ертең договорды тексеріп заметани жіберіңіз (срок: 2026-09-24); Айдана — подготовьте отчёт до пятницы в отчёте нужны итоги закупок за месяц (срок: 2026-09-25)",
+  "warnings": [
+    "Some speech has no reliable speaker assignment; review overlapping voices and diarization"
+  ]
+}
