@@ -1,12 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { AlertTriangle, Bell, CalendarClock, Check, CheckCircle2, ChevronRight, CircleDot, Filter, ListChecks, Loader2 } from 'lucide-react'
+import { Bell, Check, CheckCircle2, ChevronRight, ListChecks, Loader2 } from 'lucide-react'
 import { getAllActionItems, remindActionItem, updateActionItem } from '@/api'
 import type { ActionItem } from '@/types'
 import { daysUntil, formatDate, formatTime } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useToast } from '@/components/ui/toast'
@@ -14,11 +13,12 @@ import { useToast } from '@/components/ui/toast'
 type EnrichedAction = ActionItem & { meeting_title: string }
 type StatusFilter = 'all' | 'in_progress' | 'soon' | 'overdue' | 'done'
 
-const statusCards: Array<{ id: StatusFilter; label: string; icon: typeof CircleDot; color: string; active: string }> = [
-  { id: 'in_progress', label: 'В работе', icon: CircleDot, color: 'text-blue-700 bg-blue-50', active: 'ring-blue-400 border-blue-300' },
-  { id: 'soon', label: 'Срок скоро', icon: CalendarClock, color: 'text-amber-700 bg-amber-50', active: 'ring-amber-400 border-amber-300' },
-  { id: 'overdue', label: 'Просрочено', icon: AlertTriangle, color: 'text-red-700 bg-red-50', active: 'ring-red-400 border-red-300' },
-  { id: 'done', label: 'Выполнено', icon: CheckCircle2, color: 'text-emerald-700 bg-emerald-50', active: 'ring-emerald-400 border-emerald-300' },
+const statusFilters: Array<{ id: StatusFilter; label: string }> = [
+  { id: 'all', label: 'Все' },
+  { id: 'in_progress', label: 'В работе' },
+  { id: 'soon', label: 'Срок скоро' },
+  { id: 'overdue', label: 'Просрочено' },
+  { id: 'done', label: 'Выполнено' },
 ]
 
 function matchesStatus(item: EnrichedAction, filter: StatusFilter) {
@@ -53,7 +53,7 @@ export function TasksPage() {
   useEffect(() => { getAllActionItems().then(setTasks).catch(() => toast('Не удалось загрузить поручения')).finally(() => setLoading(false)) }, [toast])
   const assignees = useMemo(() => Array.from(new Set(tasks.map((task) => task.assignee).filter((name): name is string => Boolean(name)))).sort(), [tasks])
   const meetings = useMemo(() => Array.from(new Map(tasks.map((task) => [task.meeting_id, task.meeting_title])).entries()), [tasks])
-  const counts = useMemo(() => Object.fromEntries(statusCards.map((card) => [card.id, tasks.filter((item) => matchesStatus(item, card.id)).length])), [tasks])
+  const counts = useMemo(() => Object.fromEntries(statusFilters.map(({ id }) => [id, tasks.filter((item) => matchesStatus(item, id)).length])), [tasks])
   const filtered = tasks.filter((task) => matchesStatus(task, status) && (assignee === 'all' || task.assignee === assignee) && (meetingId === 'all' || task.meeting_id === meetingId))
 
   const markDone = async (task: EnrichedAction) => {
@@ -81,22 +81,59 @@ export function TasksPage() {
 
   const reminderText = reminding ? `Здравствуйте, ${reminding.assignee ?? 'ответственный'}!\n\nНапоминаем о поручении: ${reminding.task}\nСрок исполнения: ${reminding.deadline_date ? formatDate(reminding.deadline_date) : 'не указан'}\nСовещание: ${reminding.meeting_title}\n\nСсылка: ${window.location.origin}/meetings/${reminding.meeting_id}?t=${reminding.timestamp}` : ''
 
-  return <div className="space-y-7">
-    <div><p className="mb-2 text-xs font-semibold uppercase tracking-[.16em] text-teal-700">Единый реестр</p><h1 className="page-title">Контроль поручений</h1><p className="mt-2 text-sm text-muted-foreground">Поручения из всех протоколов и контроль сроков исполнения</p></div>
+  return <div className="td-page">
+    <header className="td-page-heading">
+      <div>
+        <h1 className="page-title">Поручения</h1>
+        <p className="td-page-subtitle">Единый список решений и сроков исполнения</p>
+      </div>
+      <span className="hidden items-center gap-1.5 text-xs text-[#777] sm:flex"><ListChecks className="h-4 w-4" />{tasks.length} всего</span>
+    </header>
 
-    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{statusCards.map((card) => { const Icon = card.icon; return <button key={card.id} onClick={() => setStatus(status === card.id ? 'all' : card.id)} className={`rounded-lg border bg-white p-4 text-left shadow-panel transition-all hover:-translate-y-0.5 hover:shadow-md ${status === card.id ? `ring-2 ${card.active}` : ''}`}><div className="flex items-center justify-between"><span className={`rounded-lg p-2.5 ${card.color}`}><Icon className="h-5 w-5" /></span><span className="text-3xl font-semibold text-slate-900">{counts[card.id] ?? 0}</span></div><p className="mt-3 text-sm font-medium text-slate-700">{card.label}</p></button> })}</div>
-
-    <Card><CardContent className="flex flex-col gap-3 p-4 lg:flex-row lg:items-center"><div className="flex items-center gap-2 text-sm font-medium text-slate-700"><Filter className="h-4 w-4 text-teal-700" />Фильтры</div><div className="grid flex-1 gap-3 sm:grid-cols-2"><Select value={assignee} onValueChange={setAssignee}><SelectTrigger><SelectValue placeholder="Ответственный" /></SelectTrigger><SelectContent><SelectItem value="all">Все ответственные</SelectItem>{assignees.map((name) => <SelectItem key={name} value={name}>{name}</SelectItem>)}</SelectContent></Select><Select value={meetingId} onValueChange={setMeetingId}><SelectTrigger><SelectValue placeholder="Совещание" /></SelectTrigger><SelectContent><SelectItem value="all">Все совещания</SelectItem>{meetings.map(([id, title]) => <SelectItem key={id} value={id}>{title}</SelectItem>)}</SelectContent></Select></div><div className="text-xs text-muted-foreground">Найдено: {filtered.length}</div></CardContent></Card>
-
-    <div className="space-y-3">
-      {loading && [1, 2, 3].map((item) => <div key={item} className="h-36 animate-pulse rounded-lg border bg-white" />)}
-      {!loading && filtered.length === 0 && <Card><CardContent className="p-10 text-center"><ListChecks className="mx-auto mb-3 h-8 w-8 text-slate-300" /><p className="font-medium">Поручения не найдены</p><p className="mt-1 text-sm text-muted-foreground">Измените выбранные фильтры</p></CardContent></Card>}
-      {!loading && filtered.map((task) => <Card key={task.id} className={`overflow-hidden ${task.status === 'done' ? 'bg-slate-50/60' : ''}`}><CardContent className="p-0"><div className="grid lg:grid-cols-[minmax(0,1fr)_230px]">
-        <div className="p-5"><div className="mb-3 flex flex-wrap items-center gap-2">{deadlineBadge(task)}<Badge variant="outline">{task.urgency === 'high' ? 'Высокая срочность' : task.urgency === 'medium' ? 'Средняя срочность' : 'Низкая срочность'}</Badge>{task.needs_review && <Badge variant="warning">Требует проверки</Badge>}{task.reminded_at && <span className="flex items-center gap-1 text-[11px] text-violet-700"><Bell className="h-3 w-3" />Напоминание {formatDate(task.reminded_at, true)}</span>}</div><h3 className={`font-semibold leading-6 ${task.status === 'done' ? 'text-slate-500 line-through decoration-slate-300' : 'text-slate-900'}`}>{task.task}</h3><div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-xs text-muted-foreground"><span><span className="font-medium text-slate-600">Ответственный:</span> {task.assignee ?? 'не определён'}</span><span><span className="font-medium text-slate-600">Срок:</span> {task.deadline_date ? formatDate(task.deadline_date) : 'не указан'}</span></div><Link to={`/meetings/${task.meeting_id}?t=${task.timestamp}`} className="mt-4 inline-flex items-center gap-1 text-xs font-medium text-teal-700 hover:text-teal-900">{task.meeting_title} · {formatTime(task.timestamp)}<ChevronRight className="h-3.5 w-3.5" /></Link></div>
-        <div className="flex items-center gap-2 border-t bg-slate-50/70 p-4 lg:flex-col lg:items-stretch lg:justify-center lg:border-l lg:border-t-0"><Button variant="outline" className="flex-1" onClick={() => setReminding(task)} disabled={task.status === 'done' || task.needs_review}><Bell className="h-4 w-4" />{task.needs_review ? 'Сначала проверить' : 'Напомнить'}</Button><Button variant={task.status === 'done' ? 'secondary' : 'default'} className="flex-1" onClick={() => markDone(task)} disabled={saving || task.needs_review}><Check className="h-4 w-4" />{task.status === 'done' ? 'Вернуть в работу' : 'Выполнено'}</Button></div>
-      </div></CardContent></Card>)}
+    <div className="td-task-filters" role="group" aria-label="Фильтр по статусу">
+      {statusFilters.map(({ id, label }) => <button key={id} type="button" aria-pressed={status === id} onClick={() => setStatus(id)}>
+        {label}<span className="ml-1.5 text-[11px] text-[#888]">{counts[id] ?? 0}</span>
+      </button>)}
     </div>
 
-    <Dialog open={Boolean(reminding)} onOpenChange={(open) => !open && setReminding(null)}><DialogContent className="max-w-xl"><DialogHeader><DialogTitle>Напоминание об исполнении</DialogTitle><DialogDescription>Проверьте готовый текст. В прототипе сохраняется отметка о напоминании.</DialogDescription></DialogHeader><div className="rounded-lg border bg-slate-50 p-4"><pre className="whitespace-pre-wrap font-sans text-sm leading-6 text-slate-700">{reminderText}</pre></div><DialogFooter><Button variant="outline" onClick={() => setReminding(null)}>Отмена</Button><Button onClick={saveReminder} disabled={saving}>{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Bell className="h-4 w-4" />}Напомнить</Button></DialogFooter></DialogContent></Dialog>
+    <div className="td-toolbar td-task-toolbar">
+      <Select value={assignee} onValueChange={setAssignee}><SelectTrigger aria-label="Фильтр по ответственному"><SelectValue placeholder="Ответственный" /></SelectTrigger><SelectContent><SelectItem value="all">Все ответственные</SelectItem>{assignees.map((name) => <SelectItem key={name} value={name}>{name}</SelectItem>)}</SelectContent></Select>
+      <Select value={meetingId} onValueChange={setMeetingId}><SelectTrigger aria-label="Фильтр по совещанию"><SelectValue placeholder="Совещание" /></SelectTrigger><SelectContent><SelectItem value="all">Все совещания</SelectItem>{meetings.map(([id, title]) => <SelectItem key={id} value={id}>{title}</SelectItem>)}</SelectContent></Select>
+      <span className="ml-auto text-xs text-[#858585]">Найдено: {filtered.length}</span>
+    </div>
+
+    <div className="td-task-list">
+      {loading && [1, 2, 3].map((item) => <div key={item} className="flex gap-4 border-t border-[#e7e7e7] py-6"><div className="h-5 w-5 animate-pulse rounded border bg-[#f5f5f5]" /><div className="space-y-2"><div className="h-3 w-64 animate-pulse rounded bg-[#eee]" /><div className="h-3 w-40 animate-pulse rounded bg-[#f3f3f3]" /></div></div>)}
+      {!loading && filtered.length === 0 && <div className="td-empty">
+        <ListChecks className="mx-auto mb-4 h-8 w-8 text-[#aaa]" strokeWidth={1.4} />
+        <h3 className="text-[17px] font-medium">Поручения не найдены</h3>
+        <p className="mt-2 text-[13px] leading-7 text-[#777]">Измени фильтры или сначала подготовь протокол совещания.</p>
+      </div>}
+      {!loading && filtered.map((task) => <article key={task.id} className={`td-task-row ${task.status === 'done' ? 'td-task-complete' : ''}`}>
+        <button type="button" className="td-task-toggle" aria-label={task.status === 'done' ? 'Вернуть поручение в работу' : 'Отметить поручение выполненным'} aria-pressed={task.status === 'done'} onClick={() => markDone(task)} disabled={saving || task.needs_review}>
+          {task.status === 'done' && <Check className="h-3.5 w-3.5" />}
+        </button>
+        <div className="min-w-0 flex-1">
+          <div className="mb-2 flex flex-wrap items-center gap-2">{deadlineBadge(task)}{task.needs_review && <Badge variant="secondary">Требует проверки</Badge>}{task.reminded_at && <span className="text-[11px] text-[#777]">Напоминание {formatDate(task.reminded_at, true)}</span>}</div>
+          <h2 className="text-[15px] font-medium leading-6 text-[#252525]">{task.task}</h2>
+          <div className="mt-1.5 flex flex-wrap gap-x-2 gap-y-1 text-xs text-[#707070]">
+            <span>{task.assignee ?? 'Ответственный не определён'}</span><span className="text-[#bbb]">·</span>
+            <span>{task.deadline_date ? formatDate(task.deadline_date) : 'Срок не указан'}</span><span className="text-[#bbb]">·</span>
+            <span>{task.urgency === 'high' ? 'Высокая срочность' : task.urgency === 'medium' ? 'Средняя срочность' : 'Низкая срочность'}</span>
+          </div>
+          <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+            <Link to={`/meetings/${task.meeting_id}?t=${task.timestamp}`} className="inline-flex min-w-0 items-center gap-1 text-xs text-[#666] hover:text-[#171717] hover:underline hover:underline-offset-4">
+              <span className="truncate">{task.meeting_title}</span><span className="shrink-0">· {formatTime(task.timestamp)}</span><ChevronRight className="h-3.5 w-3.5 shrink-0" />
+            </Link>
+            <div className="flex items-center gap-1">
+              <Button size="sm" variant="ghost" onClick={() => setReminding(task)} disabled={task.status === 'done' || task.needs_review} title={task.needs_review ? 'Сначала проверь поручение' : 'Подготовить напоминание'}><Bell className="h-3.5 w-3.5" /><span>Напомнить</span></Button>
+              {task.status === 'done' && <span className="inline-flex items-center gap-1 text-[11px] text-[#777]"><CheckCircle2 className="h-3.5 w-3.5" />Готово</span>}
+            </div>
+          </div>
+        </div>
+      </article>)}
+    </div>
+
+    <Dialog open={Boolean(reminding)} onOpenChange={(open) => !open && setReminding(null)}><DialogContent className="max-w-xl"><DialogHeader><DialogTitle>Напоминание об исполнении</DialogTitle><DialogDescription>Текст будет сохранён вместе с отметкой о напоминании.</DialogDescription></DialogHeader><div className="rounded-[10px] bg-[#f7f7f7] p-4"><pre className="whitespace-pre-wrap font-sans text-sm leading-6 text-[#555]">{reminderText}</pre></div><DialogFooter><Button variant="outline" onClick={() => setReminding(null)}>Отмена</Button><Button onClick={saveReminder} disabled={saving}>{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Bell className="h-4 w-4" />}Напомнить</Button></DialogFooter></DialogContent></Dialog>
   </div>
 }

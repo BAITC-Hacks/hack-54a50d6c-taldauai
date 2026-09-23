@@ -2,20 +2,14 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   AudioLines,
-  CalendarDays,
-  Check,
   CircleAlert,
   CircleStop,
-  Clock3,
-  Headphones,
   Loader2,
   Mic,
   Monitor,
   Pause,
   Play,
   RotateCcw,
-  ShieldCheck,
-  Sparkles,
   Upload,
 } from 'lucide-react'
 import { createMeeting } from '@/api'
@@ -301,96 +295,74 @@ export function LiveMeetingPage() {
   const time = `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`
   const isCapturing = sessionState === 'recording' || sessionState === 'paused'
 
-  return <div className="mx-auto max-w-[1320px] space-y-7 pb-8">
-    <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-      <div>
-        <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase text-emerald-800">
-          <span className="h-2 w-2 rounded-full bg-emerald-600" /> Помощник встречи
-        </div>
-        <h1 className="page-title">Ассистент созвона</h1>
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-          Запиши встречу здесь. После завершения TaldauAI подготовит стенограмму, резюме и поручения для проверки.
-        </p>
-      </div>
-      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-        <ShieldCheck className="h-4 w-4 text-emerald-700" /> Локальная обработка аудио
-      </div>
-    </div>
+  return <div className="td-page td-page-new td-live-page">
+    <header className="td-live-heading mb-8 text-center">
+      <h1 className="page-title">Ассистент созвона</h1>
+      <p className="td-page-subtitle mx-auto max-w-[520px]">{isCapturing ? 'Идёт запись аудио встречи.' : 'Запиши встречу или подготовь запись для последующего протокола.'}</p>
+    </header>
 
-    <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
-      <div className="min-w-0 space-y-5">
-        <section className="rounded-lg border bg-white p-5 sm:p-7">
-          <div className="mb-5 flex items-center justify-between gap-3">
-            <div>
-              <h2 className="section-title">{isCapturing ? 'Текущий созвон' : sessionState === 'review' ? 'Запись готова' : 'Подготовка созвона'}</h2>
-              <p className="mt-1 text-sm text-muted-foreground">{isCapturing ? title || 'Без названия' : 'Название и дата попадут в протокол'}</p>
-            </div>
-            {isCapturing && <span className="inline-flex items-center gap-2 rounded-md bg-red-50 px-2.5 py-1.5 text-xs font-semibold text-red-700"><span className="h-2 w-2 animate-pulse rounded-full bg-red-600" />{sessionState === 'paused' ? 'Пауза' : 'Запись'}</span>}
-            {sessionState === 'review' && <span className="inline-flex items-center gap-1.5 rounded-md bg-emerald-50 px-2.5 py-1.5 text-xs font-semibold text-emerald-800"><Check className="h-3.5 w-3.5" />Готово к обработке</span>}
-          </div>
-
+    <div className="td-live-content">
+      <div className="min-w-0">
+        <section className="td-live-meta rounded-lg border bg-white p-5 sm:p-7">
           {sessionState === 'setup' ? (
-            <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_190px]">
-              <div className="space-y-2">
+            <div className="td-field-grid">
+              <div className="td-field">
                 <Label htmlFor="live-title">Название встречи</Label>
                 <Input id="live-title" autoComplete="off" value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Например, Планирование на неделю" />
               </div>
-              <div className="space-y-2">
+              <div className="td-field">
                 <Label htmlFor="live-date">Дата</Label>
-                <div className="relative">
-                  <CalendarDays className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input id="live-date" type="date" className="pl-9" value={date} onChange={(event) => setDate(event.target.value)} />
-                </div>
+                <Input id="live-date" type="date" value={date} onChange={(event) => setDate(event.target.value)} />
               </div>
-              <div className="space-y-2 sm:col-span-2">
-                <Label htmlFor="speaker-count">Ожидаемое число участников <span className="font-normal text-muted-foreground">(необязательно)</span></Label>
+              <div className="td-field sm:col-span-2">
+                <Label htmlFor="speaker-count">Ожидаемое число участников <span className="font-normal text-[#777]">(необязательно)</span></Label>
                 <Input id="speaker-count" className="max-w-40" type="number" min="1" max="32" value={speakerCount} onChange={(event) => setSpeakerCount(event.target.value)} placeholder="Например, 4" />
               </div>
             </div>
           ) : (
-            <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-t pt-4 text-sm">
-              <span className="flex items-center gap-2"><CalendarDays className="h-4 w-4 text-muted-foreground" />{new Date(`${date}T12:00:00`).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
-              {speakerCount && <span className="flex items-center gap-2"><Headphones className="h-4 w-4 text-muted-foreground" />До {speakerCount} участников</span>}
+            <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-sm text-[#707070]">
+              <span>{title}</span><span>{new Date(`${date}T12:00:00`).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+              {speakerCount && <span>До {speakerCount} участников</span>}
             </div>
           )}
         </section>
 
-        <section className="rounded-lg border bg-white p-5 sm:p-7">
-          <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-            <div>
+        <section className="td-live-controls rounded-lg border bg-white p-5 sm:p-7">
+          <div className="td-source-settings flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="td-source-heading">
               <h2 className="section-title">Источник звука</h2>
               <p className="mt-1 text-sm text-muted-foreground">Выбери, что записывать во время встречи.</p>
             </div>
-            <div className="inline-flex w-full rounded-md border bg-slate-50 p-1 sm:w-auto" aria-label="Источник звука">
-              <button type="button" aria-pressed={mode === 'tab'} disabled={starting || isCapturing || sessionState === 'review'} onClick={() => setMode('tab')} className={cn('flex min-h-9 flex-1 items-center justify-center gap-2 rounded px-3 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60 sm:flex-none', mode === 'tab' ? 'bg-white text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground')}>
+            <div className="td-source-tabs td-source-switch" role="group" aria-label="Источник звука">
+              <button type="button" aria-pressed={mode === 'tab'} disabled={starting || isCapturing || sessionState === 'review'} onClick={() => setMode('tab')}>
                 <Monitor className="h-4 w-4" /> Вкладка + микрофон
               </button>
-              <button type="button" aria-pressed={mode === 'microphone'} disabled={starting || isCapturing || sessionState === 'review'} onClick={() => setMode('microphone')} className={cn('flex min-h-9 flex-1 items-center justify-center gap-2 rounded px-3 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60 sm:flex-none', mode === 'microphone' ? 'bg-white text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground')}>
+              <button type="button" aria-pressed={mode === 'microphone'} disabled={starting || isCapturing || sessionState === 'review'} onClick={() => setMode('microphone')}>
                 <Mic className="h-4 w-4" /> Только микрофон
               </button>
             </div>
           </div>
-          <p className="mt-3 max-w-3xl text-xs leading-5 text-muted-foreground">
+          <p className="td-source-description mt-3 max-w-3xl text-xs leading-5 text-muted-foreground">
             {mode === 'tab'
               ? 'Выбери вкладку с созвоном и включи передачу звука в окне браузера. Видео экрана не сохраняется; запись содержит звук вкладки и микрофона.'
               : 'Записывается микрофон этого устройства. Участники созвона будут слышны, если звук встречи воспроизводится рядом с микрофоном.'}
           </p>
 
-          <div className="mt-6 flex min-h-40 flex-col items-center justify-center border-y py-6">
+          <div className="td-live-stage mt-6 flex min-h-40 flex-col items-center justify-center border-y py-6">
             <div className="mb-2 flex items-center gap-2 text-xs font-medium text-muted-foreground">
               {sessionState === 'recording' ? <><span className="h-2 w-2 animate-pulse rounded-full bg-red-600" /> Идёт запись</> : sessionState === 'paused' ? 'Запись на паузе' : sessionState === 'review' ? 'Запись завершена' : 'Готов к записи'}
             </div>
-            <div className={cn('font-mono text-4xl font-semibold tabular-nums text-slate-900 sm:text-5xl', isCapturing && 'text-emerald-900')} aria-live="off">{time}</div>
+            <div className="font-mono text-4xl font-normal tabular-nums text-[#171717] sm:text-[29px]" aria-live="off">{time}</div>
             <div className="mt-4 flex h-10 w-full max-w-md items-center justify-center gap-1.5" role="img" aria-label={isCapturing ? 'Уровень входящего звука' : 'Индикатор уровня звука появится во время записи'}>
               {waveformHeights.map((height, index) => {
                 const active = isCapturing && level > ((index % 9) + 1) / 16
-                return <span key={index} className={cn('w-1 rounded-full transition-all duration-100 sm:w-1.5', active ? 'bg-emerald-600' : 'bg-slate-200')} style={{ height: `${active ? Math.min(height + level * 16, 46) : height * 0.55}px` }} />
+                return <span key={index} className={cn('w-1 rounded-full transition-all duration-100 sm:w-1.5', active ? 'bg-[#555]' : 'bg-[#dedede]')} style={{ height: `${active ? Math.min(height + level * 16, 46) : height * 0.55}px` }} />
               })}
             </div>
           </div>
 
           {sessionState === 'setup' && (
-            <div className="mt-5 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+            <div className="td-live-actions mt-5 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
               <label className="flex max-w-xl items-start gap-3 text-sm leading-5">
                 <Checkbox id="meeting-consent" checked={consent} onCheckedChange={(checked) => setConsent(checked === true)} />
                 <span>Участники предупреждены о записи и обработке речи с помощью ИИ.</span>
@@ -412,7 +384,7 @@ export function LiveMeetingPage() {
           )}
 
           {sessionState === 'review' && (
-            <div className="mt-5 space-y-4">
+            <div className="td-review-actions mt-5 space-y-4">
               {previewUrl && <audio className="h-10 w-full" controls src={previewUrl} aria-label="Прослушать запись встречи" />}
               <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
                 <Button variant="outline" disabled={submitting} onClick={resetSession}><RotateCcw className="h-4 w-4" />Записать заново</Button>
@@ -429,8 +401,8 @@ export function LiveMeetingPage() {
         </section>
 
         {isCapturing && (
-          <section className="flex items-start gap-3 border-l-2 border-emerald-600 py-1 pl-4" aria-live="polite">
-            <AudioLines className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700" />
+          <section className="td-recording-note flex items-start gap-3 border-l-2 border-[#bbb] py-1 pl-4" aria-live="polite">
+            <AudioLines className="mt-0.5 h-4 w-4 shrink-0 text-[#555]" />
             <div>
               <p className="text-sm font-medium">Ассистент сохраняет аудио встречи</p>
               <p className="mt-1 text-xs leading-5 text-muted-foreground">Стенограмма, решения и поручения появятся после завершения записи и обработки.</p>
@@ -439,26 +411,6 @@ export function LiveMeetingPage() {
         )}
       </div>
 
-      <aside className="space-y-5">
-        <section className="rounded-lg border bg-white p-5">
-          <div className="mb-4 flex items-center gap-2"><Sparkles className="h-4 w-4 text-emerald-700" /><h2 className="section-title">Что делает TaldauAI</h2></div>
-          <ol className="space-y-4">
-            <li className="flex gap-3"><span className={cn('mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold', isCapturing || sessionState === 'review' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-500')}>{isCapturing || sessionState === 'review' ? <Check className="h-3.5 w-3.5" /> : '1'}</span><div><p className="text-sm font-medium">Сохраняет аудио</p><p className="mt-1 text-xs leading-5 text-muted-foreground">{mode === 'tab' ? 'Звук вкладки и микрофона записываются вместе.' : 'Записывается микрофон устройства.'}</p></div></li>
-            <li className="flex gap-3"><span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-500">2</span><div><p className="text-sm font-medium">Расшифровывает после встречи</p><p className="mt-1 text-xs leading-5 text-muted-foreground">Локальная модель обработает русскую, казахскую и смешанную речь.</p></div></li>
-            <li className="flex gap-3"><span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-500">3</span><div><p className="text-sm font-medium">Готовит результат для проверки</p><p className="mt-1 text-xs leading-5 text-muted-foreground">Участники, резюме и поручения со сроками.</p></div></li>
-          </ol>
-        </section>
-
-        <section className="rounded-lg border border-emerald-200 bg-emerald-50/60 p-5">
-          <div className="flex items-center gap-2 text-sm font-semibold text-emerald-950"><ShieldCheck className="h-4 w-4" /> Конфиденциальность</div>
-          <p className="mt-2 text-xs leading-5 text-emerald-950/75">Передаётся аудиозапись встречи. При выборе вкладки браузер не сохраняет видео экрана. Начинай запись только после уведомления участников.</p>
-        </section>
-
-        <div className="flex items-start gap-2 text-xs leading-5 text-muted-foreground">
-          <Clock3 className="mt-0.5 h-4 w-4 shrink-0" />
-          <p>Во время созвона запись идёт локально в браузере. Распознавание и сбор поручений запускаются после отправки аудио.</p>
-        </div>
-      </aside>
     </div>
   </div>
 }

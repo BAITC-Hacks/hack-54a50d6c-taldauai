@@ -1,12 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, Bot, Check, CheckCircle2, Clock3, Download, FileText, Loader2, Pencil, Quote, Sparkles, Trash2, Users } from 'lucide-react'
+import { ArrowLeft, Bot, Check, CheckCircle2, Clock3, Download, FileText, Loader2, Pencil, Quote, Trash2 } from 'lucide-react'
 import { createActionItem, deleteActionItem, exportMeetingDocx, getMeeting, updateActionItem, updateParticipant } from '@/api'
 import type { ActionItem, Meeting, Participant } from '@/types'
 import { formatDate, formatTime } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -15,7 +14,7 @@ import { useToast } from '@/components/ui/toast'
 
 const steps = ['Конвертация', 'Распознавание речи', 'Разделение говорящих', 'Извлечение поручений', 'Саммари']
 const speakerStyles = [
-  'border-blue-200 bg-blue-50 text-blue-800', 'border-teal-200 bg-teal-50 text-teal-800', 'border-violet-200 bg-violet-50 text-violet-800', 'border-amber-200 bg-amber-50 text-amber-800', 'border-rose-200 bg-rose-50 text-rose-800',
+  'border-[#e5e5e5] bg-[#f7f7f7] text-[#444]', 'border-[#e5e5e5] bg-white text-[#555]', 'border-[#e5e5e5] bg-[#f1f1f1] text-[#444]',
 ]
 const langLabels = { ru: 'RU', kk: 'KZ', mixed: 'Смеш.' }
 const urgencyLabels = { high: 'Высокая', medium: 'Средняя', low: 'Низкая' }
@@ -28,15 +27,13 @@ const processingStatuses = new Set(['converting', 'transcribing', 'diarizing', '
 
 function ProcessingProgress({ step }: { step: number }) {
   const progress = Math.min(100, Math.round((step / steps.length) * 100))
-  return <Card className="overflow-hidden border-blue-200 bg-gradient-to-r from-blue-50 to-teal-50">
-    <CardContent className="p-5 sm:p-6">
-      <div className="mb-4 flex items-center justify-between"><div><p className="font-semibold text-slate-900">Обработка записи</p><p className="mt-1 text-xs text-muted-foreground">Обычно занимает несколько минут</p></div><span className="text-sm font-semibold text-blue-700">{progress}%</span></div>
-      <div className="mb-5 h-2 overflow-hidden rounded-full bg-white"><div className="h-full rounded-full bg-gradient-to-r from-blue-600 to-teal-500 transition-all duration-700" style={{ width: `${progress}%` }} /></div>
+  return <section className="td-processing">
+      <div className="mb-4 flex items-center justify-between"><div><p className="font-medium text-[#252525]">Обработка записи</p><p className="mt-1 text-xs text-[#777]">Обычно занимает несколько минут</p></div><span className="text-xs text-[#777]">{progress}%</span></div>
+      <div className="mb-5 h-1 overflow-hidden rounded-full bg-[#e8e8e8]"><div className="h-full bg-[#555] transition-all duration-700" style={{ width: `${progress}%` }} /></div>
       <div className="grid gap-2 sm:grid-cols-5">
-        {steps.map((label, index) => { const done = index < step; const active = index === step && step < steps.length; return <div key={label} className="flex items-center gap-2 sm:block"><span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${done ? 'bg-emerald-600 text-white' : active ? 'bg-blue-700 text-white ring-4 ring-blue-100' : 'bg-white text-slate-400'}`}>{done ? <Check className="h-4 w-4" /> : index + 1}</span><p className={`text-xs sm:mt-2 ${done || active ? 'font-medium text-slate-800' : 'text-slate-400'}`}>{label}</p></div> })}
+        {steps.map((label, index) => { const done = index < step; const active = index === step && step < steps.length; return <div key={label} className="flex items-center gap-2 sm:block"><span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-medium ${done ? 'bg-[#171717] text-white' : active ? 'bg-[#e9e9e9] text-[#171717]' : 'bg-[#f5f5f5] text-[#999]'}`}>{done ? <Check className="h-4 w-4" /> : index + 1}</span><p className={`text-xs sm:mt-2 ${done || active ? 'font-medium text-[#444]' : 'text-[#999]'}`}>{label}</p></div> })}
       </div>
-    </CardContent>
-  </Card>
+  </section>
 }
 
 function ParticipantEditor({ participant, open, onOpenChange, onSave }: { participant: Participant | null; open: boolean; onOpenChange: (open: boolean) => void; onSave: (name: string, role: string) => Promise<void> }) {
@@ -143,41 +140,84 @@ export function MeetingPage() {
     finally { setDownloading(false) }
   }
 
-  if (loading) return <div className="space-y-4"><div className="h-20 animate-pulse rounded-lg bg-white" /><div className="h-52 animate-pulse rounded-lg bg-white" /></div>
-  if (!meeting) return <Card><CardContent className="p-8 text-center"><FileText className="mx-auto mb-3 h-8 w-8 text-slate-400" /><p className="font-semibold">Совещание не найдено</p><Button variant="outline" className="mt-4" onClick={() => history.back()}>Вернуться</Button></CardContent></Card>
+  if (loading) return <div className="td-page td-page-wide space-y-5"><div className="h-8 w-64 animate-pulse rounded bg-[#eee]" /><div className="h-28 animate-pulse rounded bg-[#f5f5f5]" /><div className="h-52 animate-pulse rounded bg-[#f5f5f5]" /></div>
+  if (!meeting) return <div className="td-page td-page-wide td-empty"><FileText className="mx-auto mb-4 h-8 w-8 text-[#aaa]" strokeWidth={1.4} /><p className="font-medium">Совещание не найдено</p><Link to="/" className="mt-4 inline-flex items-center gap-1 text-sm text-[#666] hover:text-[#171717]"><ArrowLeft className="h-4 w-4" />К списку совещаний</Link></div>
 
-  return <div className="space-y-6">
-    <div>
-      <Link to="/" className="mb-4 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary"><ArrowLeft className="h-4 w-4" />К списку совещаний</Link>
-      <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-start"><div><div className="mb-2 flex flex-wrap items-center gap-2"><Badge variant={reviewComplete ? 'success' : meeting.status === 'failed' || meeting.status === 'error' ? 'danger' : 'warning'}>{reviewComplete ? 'Протокол проверен' : meetingStatusLabels[meeting.status] ?? meeting.status}</Badge><span className="text-xs text-muted-foreground">{formatDate(meeting.date, true)}</span></div><h1 className="max-w-4xl text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">{meeting.title}</h1></div><Button variant="outline" onClick={downloadProtocol} disabled={!reviewComplete || downloading}>{downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}Скачать протокол (DOCX)</Button></div>
-    </div>
+  return <div className="td-page td-page-wide">
+    <Link to="/" className="mb-5 inline-flex items-center gap-1.5 text-[13px] text-[#666] hover:text-[#171717]"><ArrowLeft className="h-4 w-4" />Все совещания</Link>
+    <header className="td-protocol-heading">
+      <div className="min-w-0">
+        <div className="mb-2 flex flex-wrap items-center gap-2"><Badge variant={reviewComplete ? 'success' : meeting.status === 'failed' || meeting.status === 'error' ? 'danger' : 'warning'}>{reviewComplete ? 'Проверено' : meetingStatusLabels[meeting.status] ?? meeting.status}</Badge><span className="text-xs text-[#777]">{formatDate(meeting.date, true)}</span></div>
+        <h1 className="page-title">{meeting.title}</h1>
+      </div>
+      <Button variant="outline" onClick={downloadProtocol} disabled={!reviewComplete || downloading}>{downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}Скачать DOCX</Button>
+    </header>
 
     {processingStatuses.has(meeting.status) && <ProcessingProgress step={processingStep} />}
-    {isReady && <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"><CheckCircle2 className="h-4 w-4" />ML-обработка завершена. Проверьте говорящих, исходный текст и каждое поручение перед использованием.</div>}
-    {(meeting.warnings ?? []).map((warning) => <div key={warning} className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">{warning}</div>)}
-    {(meeting.status === 'failed' || meeting.status === 'error') && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">Обработка завершилась с ошибкой: {meeting.error_message ?? 'повторите загрузку или обратитесь к администратору.'}</div>}
+    {isReady && <div className="td-inline-alert"><CheckCircle2 className="h-4 w-4 shrink-0" />Проверь участников, исходный текст и каждое поручение перед использованием.</div>}
+    {(meeting.warnings ?? []).map((warning) => <div key={warning} className="td-inline-alert">{warning}</div>)}
+    {(meeting.status === 'failed' || meeting.status === 'error') && <div className="td-inline-alert" role="alert">Обработка завершилась с ошибкой: {meeting.error_message ?? 'повторите загрузку или обратитесь к администратору.'}</div>}
 
-    <section><div className="mb-3 flex items-center gap-2"><Users className="h-5 w-5 text-teal-700" /><h2 className="section-title">Участники</h2><Badge variant="secondary">{meeting.participants.length}</Badge></div><div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{meeting.participants.map((participant, index) => <Card key={participant.speaker_label}><CardContent className="flex items-start gap-3 p-4"><span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border text-sm font-semibold ${speakerStyles[index % speakerStyles.length]}`}>{participant.name.split(' ').map((part) => part[0]).slice(0, 2).join('')}</span><div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold">{participant.name}</p><p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{participant.role}</p>{participant.auto_detected && <span className="mt-2 inline-flex items-center gap-1 text-[11px] text-violet-700"><Bot className="h-3 w-3" />определено ИИ</span>}</div><Button size="icon" variant="ghost" aria-label={`Изменить ${participant.name}`} disabled={busy} onClick={() => setEditing(participant)}><Pencil className="h-4 w-4" /></Button></CardContent></Card>)}</div></section>
-
-    <div className="grid gap-6 xl:grid-cols-[minmax(0,1.45fr)_minmax(340px,.75fr)]">
-      <section className="min-w-0"><div className="mb-3 flex items-center gap-2"><FileText className="h-5 w-5 text-teal-700" /><h2 className="section-title">Транскрипт</h2><Badge variant="secondary">{meeting.segments.length} реплик</Badge></div><Card><CardContent className="divide-y p-0">{meeting.segments.map((segment) => { const participant = participantByLabel.get(segment.speaker_label ?? ''); const speakerIndex = Math.max(0, meeting.participants.findIndex((p) => p.speaker_label === segment.speaker_label)); return <article id={`segment-${segment.start}`} key={segment.source_segment_id ?? `${segment.start}-${segment.speaker_label}`} className={`scroll-mt-32 p-4 transition-all sm:p-5 ${highlighted === segment.start ? 'focus-row' : ''}`}><div className="mb-2 flex flex-wrap items-center gap-2"><span className={`rounded-md border px-2 py-1 text-xs font-semibold ${speakerStyles[speakerIndex % speakerStyles.length]}`}>{participant?.name ?? segment.speaker_label ?? 'Говорящий не определён'}</span><button className="flex items-center gap-1 font-mono text-xs text-slate-500 hover:text-teal-700"><Clock3 className="h-3 w-3" />{formatTime(segment.start)}</button><Badge variant="outline" className="text-[10px]">{segment.lang ? langLabels[segment.lang] : '—'}</Badge></div><p className="text-sm leading-6 text-slate-700">{segment.text}</p>{segment.suggested_text && segment.suggested_text !== segment.text && <div className="mt-3 rounded-md border border-violet-100 bg-violet-50/70 p-3"><p className="text-[11px] font-semibold uppercase tracking-wide text-violet-700">Подсказка KazLLM</p><p className="mt-1 text-sm text-violet-950">{segment.suggested_text}</p></div>}</article>})}</CardContent></Card></section>
-      <section><div className="mb-3 flex items-center gap-2"><Sparkles className="h-5 w-5 text-violet-700" /><h2 className="section-title">Саммари совещания</h2></div><Card className="sticky top-24 border-violet-100 bg-gradient-to-br from-white to-violet-50/50"><CardContent className="p-5"><p className="whitespace-pre-line text-sm leading-7 text-slate-700">{meeting.summary}</p><div className="mt-5 border-t pt-4"><p className="flex items-center gap-1.5 text-xs font-medium text-violet-700"><Bot className="h-3.5 w-3.5" />Черновик ИИ по распознанному тексту — требует проверки</p></div></CardContent></Card></section>
-    </div>
-
-    <section>
-      <div className="mb-3 flex items-center gap-2"><CheckCircle2 className="h-5 w-5 text-teal-700" /><h2 className="section-title">Поручения</h2><Badge variant="secondary">{meeting.action_items.length}</Badge><Button disabled={!isReady || busy} variant="outline" onClick={() => setTaskEditor('new')}>Добавить поручение</Button></div>
-      <Card className="overflow-hidden"><div className="overflow-x-auto"><table className="w-full min-w-[1120px] text-left text-sm">
-        <thead className="border-b bg-slate-50 text-xs uppercase tracking-wide text-slate-500"><tr><th className="w-[32%] px-4 py-3 font-medium">Суть поручения</th><th className="px-3 py-3 font-medium">Ответственный</th><th className="px-3 py-3 font-medium">Срок</th><th className="px-3 py-3 font-medium">Статус</th><th className="px-3 py-3 font-medium">Срочность</th><th className="w-36 px-3 py-3">Проверка</th></tr></thead>
-        <tbody className="divide-y">{meeting.action_items.map((action) => <tr key={action.id} className="align-top hover:bg-slate-50/70">
-          <td className="px-4 py-3"><div className="flex items-center gap-2">{action.needs_review && <Badge variant="warning">Требует проверки</Badge>}{action.source_segment_ids?.length ? <span className="text-[11px] text-muted-foreground">Источников: {action.source_segment_ids.length}</span> : null}</div><p className="mt-2 font-medium">{action.task}</p><Button size="sm" variant="outline" disabled={busy} onClick={() => setTaskEditor(action)}>Изменить поручение</Button><button onClick={() => jumpToTranscript(action.timestamp)} className="mt-2 flex max-w-md items-start gap-1.5 px-2 text-left text-xs leading-5 text-slate-500 hover:text-teal-700"><Quote className="mt-0.5 h-3 w-3 shrink-0" />«{action.quote}» · {formatTime(action.timestamp)}</button></td>
-          <td className="px-3 py-3">{action.assignee || 'Не определён'}</td>
-          <td className="px-3 py-3">{action.deadline_date ? formatDate(action.deadline_date) : 'Не указан'}</td>
-          <td className="px-3 py-3"><Select disabled={busy} value={action.status} onValueChange={(value: ActionItem['status']) => updateLocalAction(action, { status: value })}><SelectTrigger className={action.status === 'done' ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : ''}><SelectValue /></SelectTrigger><SelectContent><SelectItem value="in_progress">В работе</SelectItem><SelectItem value="done">Выполнено</SelectItem></SelectContent></Select></td>
-          <td className="px-3 py-3"><Select disabled={busy} value={action.urgency} onValueChange={(value: ActionItem['urgency']) => updateLocalAction(action, { urgency: value })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{Object.entries(urgencyLabels).map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}</SelectContent></Select></td>
-          <td className="space-y-2 px-3 py-3">{action.needs_review ? <Button size="sm" className="w-full" disabled={busy || !action.assignee || !action.deadline_date} onClick={() => updateLocalAction(action, { needs_review: false })}><Check className="h-4 w-4" />Подтвердить</Button> : <Badge variant="success">Проверено</Badge>}<Button size="sm" variant="ghost" className="w-full text-red-600 hover:bg-red-50 hover:text-red-700" disabled={busy} onClick={() => removeAction(action)}><Trash2 className="h-4 w-4" />Удалить</Button></td>
-        </tr>)}</tbody>
-      </table></div></Card>
+    <section className="td-section">
+      <div className="td-section-head"><h2 className="section-title">Участники <span className="ml-1 text-sm font-normal text-[#888]">{meeting.participants.length}</span></h2></div>
+      <div className="td-participant-list">
+        {meeting.participants.map((participant, index) => <div key={participant.speaker_label} className="td-participant-row">
+          <span className={`td-initials ${speakerStyles[index % speakerStyles.length]}`}>{participant.name.split(' ').map((part) => part[0]).slice(0, 2).join('')}</span>
+          <div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{participant.name}</p><p className="mt-0.5 text-xs text-[#777]">{participant.role}{participant.auto_detected ? ' · определено автоматически' : ''}</p></div>
+          <Button size="icon" variant="ghost" aria-label={`Изменить ${participant.name}`} title="Изменить участника" disabled={busy} onClick={() => setEditing(participant)}><Pencil className="h-4 w-4" /></Button>
+        </div>)}
+      </div>
     </section>
+
+    <section className="td-section">
+      <div className="td-section-head"><h2 className="section-title">Краткое содержание</h2></div>
+      <p className="td-summary-text whitespace-pre-line">{meeting.summary || 'Краткое содержание появится после обработки записи.'}</p>
+      <p className="mt-3 flex items-center gap-1.5 text-xs text-[#777]"><Bot className="h-3.5 w-3.5" />Сформировано по транскрипции · проверь перед использованием</p>
+    </section>
+
+    <section className="td-section">
+      <div className="td-section-head"><h2 className="section-title">Поручения <span className="ml-1 text-sm font-normal text-[#888]">{meeting.action_items.length}</span></h2><Button variant="outline" disabled={!isReady || busy} onClick={() => setTaskEditor('new')}>Добавить поручение</Button></div>
+      <div className="td-action-list">
+        {meeting.action_items.map((action, index) => <article data-testid="action-item" key={action.id} className="td-action-row">
+          <span className="td-action-index">{String(index + 1).padStart(2, '0')}</span>
+          <div className="min-w-0 flex-1">
+            <div className="mb-2 flex flex-wrap items-center gap-2">{action.needs_review && <Badge variant="secondary">Требует проверки</Badge>}{action.source_segment_ids?.length ? <span className="text-[11px] text-[#777]">Источников: {action.source_segment_ids.length}</span> : null}</div>
+            <p className="text-sm font-medium leading-6">{action.task}</p>
+            <Button size="sm" variant="outline" disabled={busy} onClick={() => setTaskEditor(action)}>Изменить поручение</Button>
+            <button onClick={() => jumpToTranscript(action.timestamp)} className="mt-2 flex max-w-2xl items-start gap-1.5 text-left text-xs leading-5 text-[#666] hover:text-[#171717]"><Quote className="mt-0.5 h-3 w-3 shrink-0" />«{action.quote}» · {formatTime(action.timestamp)}</button>
+
+            <div className="td-action-fields">
+              <div><span className="text-xs text-[#777]">Ответственный</span><p>{action.assignee || 'Не определён'}</p></div>
+              <div><span className="text-xs text-[#777]">Срок</span><p>{action.deadline_date ? formatDate(action.deadline_date) : 'Не указан'}</p></div>
+              <label><span>Статус</span><Select disabled={busy} value={action.status} onValueChange={(value: ActionItem['status']) => updateLocalAction(action, { status: value })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="in_progress">В работе</SelectItem><SelectItem value="done">Выполнено</SelectItem></SelectContent></Select></label>
+              <label><span>Срочность</span><Select disabled={busy} value={action.urgency} onValueChange={(value: ActionItem['urgency']) => updateLocalAction(action, { urgency: value })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{Object.entries(urgencyLabels).map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}</SelectContent></Select></label>
+            </div>
+
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              {action.needs_review ? <Button size="sm" disabled={busy || !action.assignee || !action.deadline_date} onClick={() => updateLocalAction(action, { needs_review: false })}><Check className="h-3.5 w-3.5" />Подтвердить поручение</Button> : <span className="text-xs text-[#777]">Проверено</span>}
+              <Button size="icon" variant="ghost" aria-label="Удалить поручение" title="Удалить поручение" disabled={busy} onClick={() => removeAction(action)}><Trash2 className="h-4 w-4" /></Button>
+            </div>
+          </div>
+        </article>)}
+        {meeting.action_items.length === 0 && <p className="border-t border-[#e7e7e7] py-5 text-sm text-[#777]">Поручения не найдены.</p>}
+      </div>
+    </section>
+
+    <section className="td-section">
+      <div className="td-section-head"><h2 className="section-title">Транскрипт <span className="ml-1 text-sm font-normal text-[#888]">{meeting.segments.length} реплик</span></h2></div>
+      <div className="td-transcript-list">
+        {meeting.segments.map((segment) => {
+          const participant = participantByLabel.get(segment.speaker_label ?? '')
+          const speakerIndex = Math.max(0, meeting.participants.findIndex((p) => p.speaker_label === segment.speaker_label))
+          return <article id={`segment-${segment.start}`} key={segment.source_segment_id ?? `${segment.start}-${segment.speaker_label}`} className={`td-transcript-row ${highlighted === segment.start ? 'focus-row' : ''}`}>
+            <div className="mb-2 flex flex-wrap items-center gap-2"><span className={`rounded-md border px-2 py-1 text-xs font-medium ${speakerStyles[speakerIndex % speakerStyles.length]}`}>{participant?.name ?? segment.speaker_label ?? 'Говорящий не определён'}</span><button className="flex items-center gap-1 font-mono text-xs text-[#777] hover:text-[#171717]"><Clock3 className="h-3 w-3" />{formatTime(segment.start)}</button><Badge variant="outline" className="text-[10px]">{segment.lang ? langLabels[segment.lang] : '—'}</Badge></div>
+            <p className="text-sm leading-7 text-[#333]">{segment.text}</p>
+            {segment.suggested_text && segment.suggested_text !== segment.text && <div className="mt-3 border-l-2 border-[#ddd] pl-3 text-sm leading-6 text-[#666]"><span className="mb-1 block text-[11px] text-[#888]">Предложенный вариант</span>{segment.suggested_text}</div>}
+          </article>
+        })}
+      </div>
+    </section>
+    <div className="mt-8 flex items-center justify-between border-t border-[#e7e7e7] pt-5 text-xs text-[#888]"><span>TaldauAI · Протокол совещания</span><span>{formatDate(meeting.date, true)}</span></div>
     {taskEditor && <TaskEditor key={taskEditor === 'new' ? 'new' : taskEditor.id} action={taskEditor === 'new' ? null : taskEditor} participants={meeting.participants} onSave={saveTask} onClose={() => setTaskEditor(null)} />}
     <ParticipantEditor participant={editing} open={Boolean(editing)} onOpenChange={(open) => !open && setEditing(null)} onSave={saveParticipant} />
   </div>
