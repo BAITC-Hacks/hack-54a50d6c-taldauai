@@ -12,8 +12,8 @@ class TrainingTests(unittest.TestCase):
         check_disjoint({"train": [{"sha256": "a"}], "dev": [{"sha256": "b"}]})
 
     def test_ctc_targets_keep_kazakh_letters_and_reject_unsupported_digits(self):
-        tokens = {"қ": 0, "а": 1, "з": 2, "|": 3}
-        self.assertEqual(encode_reference("ҚАЗ, қазақ!", tokens), [0, 1, 2, 3, 0, 1, 2, 1, 0])
+        tokens = {"қ": 0, "а": 1, "з": 2, "|": 3, "_": 4}
+        self.assertEqual(encode_reference("ҚАЗ, қазақ!", tokens), [4, 3, 0, 1, 2, 3, 0, 1, 2, 1, 0, 3, 4])
         with self.assertRaisesRegex(ValueError, "Unsupported"):
             encode_reference("қаз 2026", tokens)
 

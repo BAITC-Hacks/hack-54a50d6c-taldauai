@@ -54,6 +54,12 @@ def encode_reference(text, token_ids):
         raise ValueError("Unsupported target symbols: " + "".join(missing))
     if not symbols:
         raise ValueError("Empty training target")
+    # This checkpoint emits explicit silence/boundary labels _|text|_.
+    # Omitting them forces a tiny adaptation set to relearn the output
+    # convention and damages word boundaries despite correct acoustics.
+    if "_" not in token_ids or "|" not in token_ids:
+        raise ValueError("Mixed CTC adaptation requires silence and word-boundary tokens")
+    symbols = "_|" + symbols + "|_"
     return [token_ids[symbol] for symbol in symbols]
 
 
@@ -117,7 +123,7 @@ def main():
     parser.add_argument("--cache", default="data/training/features")
     parser.add_argument("--report", default="data/training/adaptation.json")
     parser.add_argument("--epochs", type=int, default=3)
-    parser.add_argument("--learning-rate", type=float, default=0.0001)
+    parser.add_argument("--learning-rate", type=float, default=0.00001)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--threads", type=int, default=4)
     args = parser.parse_args()
@@ -210,11 +216,14 @@ def main():
     report = {"method": "CTC head adaptation; frozen encoders; CPU; FP32 features and head; whole short clips without VAD",
               "base_sha256": model_hash, "trainable_parameters": sum(p.numel() for p in head.parameters()),
               "seed": args.seed, "epochs": args.epochs, "learning_rate": args.learning_rate,
+              "target_convention": "_|transcript with | word separators|_",
               "exported_head_verified": True,
               "train_clips": len(train), "dev_clips": len(dev), "skipped_train": skipped,
               "baseline_dev": baseline_dev, "history": history, "selected_epoch": best_epoch,
               "tests": results, "elapsed_seconds": round(time.monotonic() - started, 2),
               "upstream_overlap_note": "Base model already used KSC2. Tim2190 was held out from this adaptation; upstream overlap is unknown.",
+              "manifest_sha256": {str(path): hashlib.sha256(Path(path).read_bytes()).hexdigest()
+                                  for path in [args.train, args.dev, *args.test]},
               "manifests": {"train": args.train, "dev": args.dev, "test": args.test}}
     Path(args.report).parent.mkdir(parents=True, exist_ok=True)
     Path(args.report).write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n")
