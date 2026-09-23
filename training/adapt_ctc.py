@@ -189,6 +189,10 @@ def main():
         model.lm_head.bias.copy_(head.bias)
     model.save(str(output / "model.pt"))
     shutil.copyfile(source / "tokens.lst", output / "tokens.lst")
+    restored = torch.jit.load(str(output / "model.pt"), map_location="cpu").eval()
+    torch.testing.assert_close(restored.lm_head.weight, head.weight, rtol=0, atol=0)
+    torch.testing.assert_close(restored.lm_head.bias, head.bias, rtol=0, atol=0)
+    del restored
     baseline_head = torch.nn.Linear(head.in_features, head.out_features)
     baseline_head.load_state_dict(baseline)
     results = {}
@@ -206,6 +210,7 @@ def main():
     report = {"method": "CTC head adaptation; frozen encoders; CPU; FP32 features and head; whole short clips without VAD",
               "base_sha256": model_hash, "trainable_parameters": sum(p.numel() for p in head.parameters()),
               "seed": args.seed, "epochs": args.epochs, "learning_rate": args.learning_rate,
+              "exported_head_verified": True,
               "train_clips": len(train), "dev_clips": len(dev), "skipped_train": skipped,
               "baseline_dev": baseline_dev, "history": history, "selected_epoch": best_epoch,
               "tests": results, "elapsed_seconds": round(time.monotonic() - started, 2),
