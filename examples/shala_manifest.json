@@ -1,0 +1,32 @@
+[
+  {
+    "audio": "audio/mixed_deadline.wav",
+    "language": "mixed",
+    "voice": "Aru",
+    "reference": "Жұмаға дейін отчетты дайындап директорға отправьте"
+  },
+  {
+    "audio": "audio/mixed_owner.wav",
+    "language": "mixed",
+    "voice": "Aru",
+    "reference": "Айдана ертең договорды тексеріп замечания жіберіңіз"
+  },
+  {
+    "audio": "audio/mixed_action.wav",
+    "language": "mixed",
+    "voice": "Aru",
+    "reference": "Бюджетті согласовать керек жауапты Данияр срок келесі апта"
+  },
+  {
+    "audio": "audio/kk_control.wav",
+    "language": "kk",
+    "voice": "Aru",
+    "reference": "Айдана ертең есепті дайындап маған жіберіңіз"
+  },
+  {
+    "audio": "audio/ru_control.wav",
+    "language": "ru",
+    "voice": "Milena",
+    "reference": "Данияр подготовьте отчёт и отправьте его до пятницы"
+  }
+]

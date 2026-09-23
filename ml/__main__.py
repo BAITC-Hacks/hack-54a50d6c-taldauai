@@ -12,6 +12,7 @@ def main() -> int:
     parser.add_argument("audio", help="Path to WAV, MP3, M4A, MP4, OGG, or FLAC")
     parser.add_argument("--started-at", required=True, help="ISO 8601 datetime with timezone")
     parser.add_argument("--speaker-names", help="JSON file mapping SPEAKER_00 to a name")
+    parser.add_argument("--num-speakers", type=int, help="Known speaker count; improves short-recording diarization")
     parser.add_argument("--output", help="Write JSON to a file; default stdout")
     args = parser.parse_args()
     names = None
@@ -19,7 +20,7 @@ def main() -> int:
         with open(args.speaker_names, encoding="utf-8") as stream:
             names = json.load(stream)
     try:
-        result = process_meeting(args.audio, args.started_at, names)
+        result = process_meeting(args.audio, args.started_at, names, num_speakers=args.num_speakers)
     except (ValueError, RuntimeError) as exc:
         print(f"ML processing failed: {exc}", file=sys.stderr)
         return 1

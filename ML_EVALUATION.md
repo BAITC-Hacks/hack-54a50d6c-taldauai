@@ -1,0 +1,76 @@
+# Проверка смешанного ASR — 23 сентября 2026
+
+Это проверка запуска на **пяти коротких синтетических фразах**, а не оценка
+точности на живых совещаниях. Казахский голос macOS Aru озвучивал три смешанные
+фразы и одну казахскую; Milena — одну русскую. В эталонах использован исходный
+сценарий TTS, без независимой проверки произношения носителем языка. Ошибки
+синтеза могут влиять на метрики.
+
+| Записи | Mixed CTC CER | Mixed CTC WER | Whisper large-v3 CER | Whisper large-v3 WER |
+|---|---:|---:|---:|---:|
+| 3 смешанные | 8,81% | 35,00% | 15,09% | 45,00% |
+| 1 казахская | 0,00% | 0,00% | 2,27% | 16,67% |
+| 1 русская | 1,96% | 12,50% | 7,84% | 25,00% |
+
+Метрики считаются по сумме ошибок / сумме эталонных символов или слов в группе.
+Нормализация: нижний регистр, удаление пунктуации, выравнивание пробелов.
+Буквы `ё`, `ұ`, `ү`, `і` и другие не заменяются похожими символами.
+
+В этом замере специализированный ASR лучше обоих языковых контролей и
+смешанной группы. Для первого эксперимента с живой записью предлагаем его,
+сохраняя Whisper как переключаемый вариант. По этому малому набору нельзя
+утверждать, что выбранная модель лучше на реальных совещаниях.
+
+## Как повторить
+
+Аудио: `examples/audio/*.wav`. Эталоны: `examples/shala_manifest.json`.
+Результаты: `examples/results/*.json`. Все имена и поручения вымышлены.
+
+```bash
+TALDAU_ASR_ENGINE=mixed-ctc TALDAU_ASR_MODEL=models/mixed-stt \
+  .venv/bin/python -m ml.evaluate examples/shala_manifest.json --output data/mixed-eval.json
+TALDAU_ASR_ENGINE=whisper TALDAU_ASR_MODEL=models/faster-whisper-large-v3 \
+  .venv/bin/python -m ml.evaluate examples/shala_manifest.json --output data/whisper-eval.json
+```
+
+Фикстуры уже включены: macOS для повторения оценки не требуется. Для их
+пересоздания на macOS можно выполнить `python scripts/make_synthetic_audio.py`.
+
+Запуск выполнен на macOS ARM64 CPU. Whisper: int8, beam=5, multilingual=True,
+condition_on_previous_text=False. Mixed CTC: FP32, greedy, без KenLM. VAD:
+Silero из faster-whisper. Время 2,37 с и 72,82 с в отчётах включает повторную
+загрузку весов на каждом файле, поэтому это не оценка производительности
+постоянно работающего сервиса.
+
+## Что ещё проверить
+
+- Живую смешанную речь минимум двух участников, включая русские слова с
+  казахскими окончаниями, имена, числа, сроки и перебивания.
+- Точность диаризации и привязки ответственного к голосу.
+- Поручения и саммари KazLLM с доступными локальными весами.
+
+Полный сценарий аудио → диаризация → KazLLM → JSON выполнен локально.
+Результат: `examples/results/meeting_result.json`. На сценарии из двух поручений
+получены три: подтверждение проверки договора выделено как отдельное поручение
+с искажённым именем. Сроки завтра / пятница нормализованы в 24 / 25 сентября.
+Все поручения помечены `needs_review: true`. Текстовая подсказка KazLLM
+не устранила ключевые ошибки ASR. Это успешный запуск программы, но не
+успешная проверка качества поручений.
+
+```bash
+TALDAU_ASR_ENGINE=mixed-ctc TALDAU_ASR_MODEL=models/mixed-stt \
+TALDAU_DIARIZATION_MODEL=models/speaker-diarization-community-1 \
+TALDAU_LLM_MODEL=taldau-kazllm TALDAU_KAZLLM_MODEL=taldau-kazllm \
+  .venv/bin/python -m ml examples/audio/meeting_demo.wav \
+  --started-at '2026-09-23T14:00:00+05:00' --num-speakers 2 --output data/meeting_result.json
+```
+
+На коротком двухголосном TTS-примере `examples/audio/meeting_demo.wav`
+pyannote ошибается: без подсказки обнаруживает один голос, с `num_speakers=2`
+разделяет запись на два кластера, но их границы не совпадают с истинной сменой
+голосов. Этот результат не считается успешной проверкой диаризации.
+Сценарий реплик хранится в `examples/meeting_manifest.json`.
+
+Источники моделей: [Mixed STT](https://huggingface.co/alibiserikbay/kazakh-russian-mixed-stt)
+(Apache-2.0; автор отмечает ограничения на дальнем микрофоне и совещаниях),
+[Whisper large-v3 CT2](https://huggingface.co/Systran/faster-whisper-large-v3).
