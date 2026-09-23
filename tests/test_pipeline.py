@@ -2,9 +2,15 @@ import unittest
 from datetime import date
 
 from ml.pipeline import _combine, _resolve_due_date, _validate_extraction
+from ml.evaluate import _edit_distance, _normalize
 
 
 class PipelineTests(unittest.TestCase):
+    def test_cer_counts_kazakh_letters(self):
+        self.assertEqual(_normalize("Қазақша, орысша!"), "қазақша орысша")
+        self.assertEqual(_edit_distance("срок", "срок"), 0)
+        self.assertEqual(_edit_distance("жұма", "жума"), 1)
+
     def test_speaker_overlap_and_unknown_speaker(self):
         segments, speakers = _combine(
             [{"start_ms": 0, "end_ms": 1000, "text": "Первое"},

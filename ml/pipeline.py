@@ -51,7 +51,8 @@ def _transcribe(path: Path) -> list[dict]:
     model = WhisperModel(model_path, device=device, compute_type=compute_type, local_files_only=True)
     result, _ = model.transcribe(
         str(path), task="transcribe", language=None, vad_filter=True,
-        word_timestamps=True, beam_size=5,
+        word_timestamps=True, beam_size=5, multilingual=True,
+        condition_on_previous_text=False,
     )
     segments = []
     for item in result:
