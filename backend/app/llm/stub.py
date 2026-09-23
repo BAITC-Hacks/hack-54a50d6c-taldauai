@@ -26,6 +26,8 @@ class StubExtraction(ExtractionBackend):
                     "urgency": "medium",
                     "quote": quote,
                     "timestamp": segments[-1]["start"],
+                    "needs_review": False,
+                    "source_segment_ids": [],
                     "reminded_at": None,
                 }
             ],
