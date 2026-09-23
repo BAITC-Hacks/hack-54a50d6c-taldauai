@@ -1,6 +1,8 @@
-import type { ReactNode } from 'react'
-import { Link, NavLink } from 'react-router-dom'
-import { AudioLines, CalendarDays, FileAudio, ListChecks, ShieldCheck, Upload } from 'lucide-react'
+import { useEffect, useState, type ReactNode } from 'react'
+import { Link, NavLink, useLocation } from 'react-router-dom'
+import { AudioLines, CalendarDays, FileAudio, ListChecks, Menu, Mic, Plus, ShieldCheck, X } from 'lucide-react'
+import { getMeetings } from '@/api'
+import type { Meeting } from '@/types'
 import { cn } from '@/lib/utils'
 
 const primaryNav = [
@@ -9,69 +11,90 @@ const primaryNav = [
   { to: '/tasks', label: 'Поручения', icon: ListChecks },
 ]
 
-const mobileNav = [
-  ...primaryNav,
-  { to: '/new', label: 'Загрузить', icon: Upload },
-]
-
 function Brand() {
-  return <Link to="/" className="flex items-center gap-2.5 px-2 py-2">
-    <span className="grid h-8 w-8 place-items-center rounded-md bg-emerald-800 text-sm font-bold text-white">T</span>
-    <span className="min-w-0"><span className="block text-sm font-semibold text-slate-900">TaldauAI</span><span className="block text-[11px] text-slate-500">Ассистент совещаний</span></span>
+  return <Link to="/" className="flex items-center gap-[9px] px-[13px] text-[19px] font-semibold text-[#171717]">
+    <AudioLines className="h-[22px] w-[22px]" strokeWidth={1.8} />
+    <span>TaldauAI</span>
   </Link>
 }
 
-function NavItems({ compact = false }: { compact?: boolean }) {
-  const entries = compact ? mobileNav : primaryNav
-  return <nav className={cn('flex', compact ? 'justify-around' : 'flex-col gap-1')} aria-label="Основная навигация">
-    {entries.map(({ to, label, icon: Icon, end }) => <NavLink
-      key={to}
-      to={to}
-      end={end}
-      aria-label={label}
-      className={({ isActive }) => cn(
-        'flex items-center gap-2.5 rounded-md text-sm font-medium transition-colors',
-        compact
-          ? 'min-w-0 flex-1 flex-col justify-center gap-1 px-1 py-2 text-[10px]'
-          : 'px-3 py-2.5',
-        isActive ? 'bg-emerald-50 text-emerald-900' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900',
-      )}
-    >
-      <Icon className={cn(compact ? 'h-5 w-5' : 'h-4 w-4')} />
-      <span className={compact ? 'max-w-full truncate' : ''}>{label}</span>
-    </NavLink>)}
-  </nav>
+function pageTitle(pathname: string) {
+  if (pathname.startsWith('/meetings/')) return 'Протокол'
+  if (pathname === '/tasks') return 'Поручения'
+  if (pathname === '/live') return 'Ассистент созвона'
+  if (pathname === '/new') return 'Новое совещание'
+  return 'Совещания'
 }
 
 export function Layout({ children }: { children: ReactNode }) {
-  return <div className="min-h-screen bg-background lg:grid lg:grid-cols-[248px_minmax(0,1fr)]">
-    <aside className="sticky top-0 hidden h-screen flex-col border-r bg-white px-3 py-4 lg:flex">
-      <Brand />
-      <p className="mb-2 mt-8 px-3 text-[11px] font-semibold uppercase text-slate-400">Рабочее место</p>
-      <NavItems />
-      <Link to="/new" className="mt-5 flex min-h-10 items-center gap-2 rounded-md border border-slate-200 px-3 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50">
-        <FileAudio className="h-4 w-4" /> Загрузить запись
+  const location = useLocation()
+  const [navigationOpen, setNavigationOpen] = useState(false)
+  const [recent, setRecent] = useState<Meeting[]>([])
+
+  useEffect(() => {
+    let active = true
+    getMeetings().then((meetings) => { if (active) setRecent(meetings.slice(0, 5)) }).catch(() => undefined)
+    return () => { active = false }
+  }, [])
+
+  useEffect(() => setNavigationOpen(false), [location.pathname])
+
+  return <div className="min-h-screen bg-white text-[#171717]">
+    {navigationOpen && <button type="button" aria-label="Закрыть меню" onClick={() => setNavigationOpen(false)} className="fixed inset-0 z-50 bg-black/35 md:hidden" />}
+
+    <aside className={cn(
+      'fixed inset-y-0 left-0 z-[60] flex w-[244px] flex-col bg-[#f9f9f9] px-[14px] pb-[15px] pt-6 transition-transform duration-200',
+      navigationOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
+    )}>
+      <div className="mb-[34px] flex items-center justify-between">
+        <Brand />
+        <button type="button" aria-label="Закрыть меню" onClick={() => setNavigationOpen(false)} className="grid h-8 w-8 place-items-center rounded-lg text-[#777] hover:bg-[#efefef] md:hidden"><X className="h-4 w-4" /></button>
+      </div>
+
+      <Link to="/new" className="mb-1 flex min-h-[43px] items-center gap-[11px] rounded-[10px] px-[13px] text-sm font-medium text-[#171717] transition-colors hover:bg-[#eee]">
+        <Plus className="h-[19px] w-[19px]" strokeWidth={1.8} /> Новое совещание
       </Link>
-      <div className="mt-auto border-t px-2 pt-4">
-        <div className="flex items-start gap-2.5 text-xs leading-5 text-slate-500">
-          <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700" />
-          <span><strong className="font-medium text-slate-700">Локальная обработка</strong><br />Аудио обрабатывается в закрытом контуре.</span>
+      <nav className="flex flex-col gap-[5px]" aria-label="Основная навигация">
+        {primaryNav.map(({ to, label, icon: Icon, end }) => <NavLink
+          key={to}
+          to={to}
+          end={end}
+          className={({ isActive }) => cn(
+            'flex min-h-[43px] items-center gap-[11px] rounded-[10px] px-[13px] text-sm text-[#424242] transition-colors hover:bg-[#eee]',
+            isActive && 'bg-[#ebebeb] font-medium text-[#171717]',
+          )}
+        >
+          <Icon className="h-[19px] w-[19px]" strokeWidth={1.7} /> {label}
+        </NavLink>)}
+      </nav>
+
+      <div className="mt-8">
+        <p className="mb-2 px-[13px] text-xs text-[#7b7b7b]">Недавние</p>
+        <div className="flex flex-col gap-0.5">
+          {recent.map((meeting) => <Link key={meeting.id} to={`/meetings/${meeting.id}`} title={meeting.title} className="truncate rounded-[9px] px-[13px] py-[9px] text-[13px] text-[#555] hover:bg-[#ededed] hover:text-[#171717]">{meeting.title}</Link>)}
+          {recent.length === 0 && <span className="px-[13px] py-2 text-xs text-[#888]">Пока нет совещаний</span>}
         </div>
+      </div>
+
+      <div className="mt-auto border-t border-[#e7e7e7] pt-5">
+        <Link to="/new" className="flex items-center gap-2 rounded-[9px] px-[13px] py-[10px] text-xs text-[#777] hover:bg-[#eee] hover:text-[#171717]">
+          <FileAudio className="h-[15px] w-[15px]" /> Загрузить запись
+        </Link>
+        <p className="px-[13px] pt-2 text-[11px] leading-5 text-[#888]"><ShieldCheck className="mr-1 inline h-3.5 w-3.5 align-[-2px]" />Записывай только с согласия участников</p>
       </div>
     </aside>
 
-    <div className="min-w-0">
-      <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b bg-white/95 px-4 backdrop-blur lg:hidden">
-        <Brand />
-        <span className="flex items-center gap-1.5 text-[11px] font-medium text-emerald-800"><ShieldCheck className="h-3.5 w-3.5" />Локально</span>
+    <div className="min-h-screen md:ml-[244px]">
+      <header className="sticky top-0 z-40 flex h-[61px] items-center gap-2 bg-white/95 px-[14px] backdrop-blur md:h-[70px] md:gap-3 md:px-7">
+        <button type="button" aria-label="Открыть меню" title="Открыть меню" onClick={() => setNavigationOpen(true)} className="grid h-9 w-9 shrink-0 place-items-center rounded-[9px] text-[#666] hover:bg-[#efefef] md:hidden"><Menu className="h-5 w-5" /></button>
+        <span className="min-w-0 truncate text-sm font-medium text-[#555]">{pageTitle(location.pathname)}</span>
+        <div className="ml-auto flex shrink-0 items-center gap-1">
+          <Link to="/live" aria-label="Запустить ассистента" title="Запустить ассистента" className="grid h-9 w-9 place-items-center rounded-[9px] text-[#666] hover:bg-[#efefef] hover:text-[#171717]"><Mic className="h-[18px] w-[18px]" /></Link>
+        </div>
       </header>
-      <main className="mx-auto min-h-[calc(100vh-3.5rem)] max-w-[1480px] px-4 py-6 pb-24 sm:px-6 sm:py-8 sm:pb-24 lg:px-8 lg:pb-10">
+      <main id="main" className="min-h-[calc(100vh-61px)] px-0 md:min-h-[calc(100vh-70px)]">
         {children}
       </main>
-    </div>
-
-    <div className="fixed inset-x-0 bottom-0 z-40 border-t bg-white/95 px-2 pb-[env(safe-area-inset-bottom)] pt-1 backdrop-blur lg:hidden">
-      <NavItems compact />
     </div>
   </div>
 }
