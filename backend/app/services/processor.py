@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import time
+from threading import Lock
 from datetime import date, timezone
 
 from sqlalchemy import delete, select
@@ -12,6 +13,10 @@ from app.llm import get_extraction_backend
 from app.models import ActionItem, Meeting, Participant, Segment
 
 from .ml_adapter import adapt_ml_result, run_ml_pipeline
+
+
+# One Uvicorn worker only: avoid concurrent copies of the heavy local models.
+_ml_lock = Lock()
 
 
 def _set_status(meeting_id: str, status: str) -> None:
@@ -109,7 +114,12 @@ def process_meeting(meeting_id: str) -> None:
         if use_stub:
             _process_stub(meeting_id, audio_path)
         else:
-            _process_local_ml(meeting_id, meeting)
+            if settings.ml_result_fixture is None and (
+                settings.asr_backend != "local_ml" or settings.llm_backend != "local_ml"
+            ):
+                raise ValueError("Real ML requires ASR_BACKEND=local_ml and LLM_BACKEND=local_ml")
+            with _ml_lock:
+                _process_local_ml(meeting_id, meeting)
     except Exception as exc:  # background jobs must persist their failure state
         with SessionLocal() as session:
             meeting = session.scalar(select(Meeting).where(Meeting.id == meeting_id))

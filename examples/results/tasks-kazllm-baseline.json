@@ -1,0 +1,206 @@
+{
+  "model": "taldau-kazllm",
+  "scope": "task extraction from annotated synthetic text; no ASR or diarization",
+  "passed": 2,
+  "total": 6,
+  "cases": [
+    {
+      "id": "ru_confirmation",
+      "language": "ru",
+      "expected": 1,
+      "predicted": 2,
+      "matched": 1,
+      "extra_or_incorrect": 1,
+      "missed": 0,
+      "passed": false,
+      "tasks": [
+        {
+          "id": "task_0001",
+          "description": "подготовить отчет по закупкам",
+          "assignee_name": "Марат",
+          "assignee_speaker_id": "SPEAKER_01",
+          "assigner_speaker_id": "SPEAKER_00",
+          "due_date": "2026-09-25",
+          "due_text": "до пятницы",
+          "source_segment_ids": [
+            "s1"
+          ],
+          "needs_review": false
+        },
+        {
+          "id": "task_0002",
+          "description": "подготовить отчет по закупкам",
+          "assignee_name": "Марат",
+          "assignee_speaker_id": "SPEAKER_01",
+          "assigner_speaker_id": null,
+          "due_date": "2026-09-25",
+          "due_text": "до пятницы",
+          "source_segment_ids": [
+            "s2"
+          ],
+          "needs_review": true
+        }
+      ],
+      "summary": "Марат, подготовьте отчет по закупкам до пятницы.",
+      "warnings": [
+        "Task 2: assigner is not a speaker in the cited segments"
+      ],
+      "elapsed_seconds": 8.18
+    },
+    {
+      "id": "kk_confirmation",
+      "language": "kk",
+      "expected": 1,
+      "predicted": 1,
+      "matched": 1,
+      "extra_or_incorrect": 0,
+      "missed": 0,
+      "passed": true,
+      "tasks": [
+        {
+          "id": "task_0001",
+          "description": "Дайындық есеп",
+          "assignee_name": "Алия",
+          "assignee_speaker_id": "SPEAKER_01",
+          "assigner_speaker_id": "SPEAKER_00",
+          "due_date": "2026-09-24",
+          "due_text": "ертең",
+          "source_segment_ids": [
+            "s1"
+          ],
+          "needs_review": false
+        }
+      ],
+      "summary": "Алия, ертең есеп дайындап жіберіңіз.",
+      "warnings": [],
+      "elapsed_seconds": 2.96
+    },
+    {
+      "id": "mixed_two_assignees",
+      "language": "mixed",
+      "expected": 2,
+      "predicted": 2,
+      "matched": 2,
+      "extra_or_incorrect": 0,
+      "missed": 0,
+      "passed": true,
+      "tasks": [
+        {
+          "id": "task_0001",
+          "description": "Проверить договор завтра",
+          "assignee_name": "Марат",
+          "assignee_speaker_id": "SPEAKER_01",
+          "assigner_speaker_id": "SPEAKER_00",
+          "due_date": "2026-09-24",
+          "due_text": "завтра",
+          "source_segment_ids": [
+            "s1"
+          ],
+          "needs_review": false
+        },
+        {
+          "id": "task_0002",
+          "description": "Подготовить бюджет до 25 сентября",
+          "assignee_name": "Алия",
+          "assignee_speaker_id": "SPEAKER_00",
+          "assigner_speaker_id": "SPEAKER_01",
+          "due_date": "2026-09-25",
+          "due_text": "до 25 сентября",
+          "source_segment_ids": [
+            "s2"
+          ],
+          "needs_review": false
+        }
+      ],
+      "summary": "Алия поручила Марату проверить договор завтра, а Марат поручил Алие подготовить бюджет до 25 сентября.",
+      "warnings": [],
+      "elapsed_seconds": 5.3
+    },
+    {
+      "id": "completed_and_cancelled",
+      "language": "ru",
+      "expected": 0,
+      "predicted": 1,
+      "matched": 0,
+      "extra_or_incorrect": 1,
+      "missed": 0,
+      "passed": false,
+      "tasks": [
+        {
+          "id": "task_0001",
+          "description": "Проверить договор отменяем",
+          "assignee_name": "Марат",
+          "assignee_speaker_id": "SPEAKER_00",
+          "assigner_speaker_id": "SPEAKER_00",
+          "due_date": null,
+          "due_text": "Нет новых поручений",
+          "source_segment_ids": [
+            "s1"
+          ],
+          "needs_review": true
+        }
+      ],
+      "summary": "Отчет уже отправлен вчера. Прежнее поручение Марату проверить договор отменяем. Новых поручений нет.",
+      "warnings": [],
+      "elapsed_seconds": 2.86
+    },
+    {
+      "id": "unknown_owner_deadline",
+      "language": "mixed",
+      "expected": 1,
+      "predicted": 1,
+      "matched": 0,
+      "extra_or_incorrect": 1,
+      "missed": 1,
+      "passed": false,
+      "tasks": [
+        {
+          "id": "task_0001",
+          "description": "Договоры необходимо проверить после согласования. Кто возьмет, пока не решится.",
+          "assignee_name": "Неизвестно",
+          "assignee_speaker_id": null,
+          "assigner_speaker_id": "SPEAKER_00",
+          "due_date": null,
+          "due_text": "Неизвестно",
+          "source_segment_ids": [
+            "s1"
+          ],
+          "needs_review": true
+        }
+      ],
+      "summary": "Договоры необходимо проверить после согласования. Кто возьмет, пока не решится.",
+      "warnings": [],
+      "elapsed_seconds": 2.8
+    },
+    {
+      "id": "two_independent_actions",
+      "language": "ru",
+      "expected": 2,
+      "predicted": 1,
+      "matched": 0,
+      "extra_or_incorrect": 1,
+      "missed": 2,
+      "passed": false,
+      "tasks": [
+        {
+          "id": "task_0001",
+          "description": "Проверьте договор завтра и подготовьте бюджет до пятницы.",
+          "assignee_name": "Марат",
+          "assignee_speaker_id": "SPEAKER_01",
+          "assigner_speaker_id": "SPEAKER_00",
+          "due_date": null,
+          "due_text": "null",
+          "source_segment_ids": [
+            "s1"
+          ],
+          "needs_review": true
+        }
+      ],
+      "summary": "Марат, завтра проверьте договор. И отдельно подготовьте бюджет до пятницы.",
+      "warnings": [
+        "Merged an identical task with overlapping source evidence"
+      ],
+      "elapsed_seconds": 4.32
+    }
+  ]
+}

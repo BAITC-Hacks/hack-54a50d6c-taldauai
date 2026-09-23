@@ -220,6 +220,8 @@ def remind_action_item(action_id: str, session: Session = Depends(get_db)) -> di
 @app.get("/api/meetings/{meeting_id}/export.docx")
 def export_meeting(meeting_id: str, session: Session = Depends(get_db)) -> StreamingResponse:
     meeting = _meeting_or_404(session, meeting_id)
+    if meeting.status != "done":
+        raise HTTPException(status_code=409, detail="Дождитесь успешного завершения обработки")
     if any(action.needs_review for action in meeting.action_items):
         raise HTTPException(status_code=409, detail="Подтвердите или удалите все поручения перед экспортом")
     document = build_protocol_docx(meeting)

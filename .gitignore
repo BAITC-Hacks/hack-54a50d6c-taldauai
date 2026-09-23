@@ -14,3 +14,6 @@ data/
 .pytest_cache/
 *.pyc
 .DS_Store
+:memory:.ses
+.env.*
+!.env.example
