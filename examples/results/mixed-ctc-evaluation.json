@@ -1,0 +1,69 @@
+{
+  "engine": "mixed-ctc",
+  "model": "models/mixed-stt",
+  "elapsed_seconds": 2.37,
+  "by_language": {
+    "ru": {
+      "files": 1,
+      "cer": 0.0196,
+      "wer": 0.125
+    },
+    "kk": {
+      "files": 1,
+      "cer": 0.0,
+      "wer": 0.0
+    },
+    "mixed": {
+      "files": 3,
+      "cer": 0.0881,
+      "wer": 0.35
+    }
+  },
+  "files": [
+    {
+      "audio": "audio/mixed_deadline.wav",
+      "language": "mixed",
+      "reference_chars": 50,
+      "reference_words": 6,
+      "word_errors": 3,
+      "character_errors": 6,
+      "hypothesis": "жұмаға дейін очидты дайындап директорға ол правте"
+    },
+    {
+      "audio": "audio/mixed_owner.wav",
+      "language": "mixed",
+      "reference_chars": 51,
+      "reference_words": 6,
+      "word_errors": 1,
+      "character_errors": 3,
+      "hypothesis": "айдана ертең договорды тексеріп самикания жіберіңіз"
+    },
+    {
+      "audio": "audio/mixed_action.wav",
+      "language": "mixed",
+      "reference_chars": 58,
+      "reference_words": 8,
+      "word_errors": 3,
+      "character_errors": 5,
+      "hypothesis": "бюгжетті согласоват керек жауапты данияр сұру келесі апта"
+    },
+    {
+      "audio": "audio/kk_control.wav",
+      "language": "kk",
+      "reference_chars": 44,
+      "reference_words": 6,
+      "word_errors": 0,
+      "character_errors": 0,
+      "hypothesis": "айдана ертең есепті дайындап маған жіберіңіз"
+    },
+    {
+      "audio": "audio/ru_control.wav",
+      "language": "ru",
+      "reference_chars": 51,
+      "reference_words": 8,
+      "word_errors": 1,
+      "character_errors": 1,
+      "hypothesis": "даниир подготовьте отчёт и отправьте его до пятницы"
+    }
+  ]
+}

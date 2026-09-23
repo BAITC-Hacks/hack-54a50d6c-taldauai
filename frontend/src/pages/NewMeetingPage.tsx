@@ -8,11 +8,12 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useToast } from '@/components/ui/toast'
 import { cn } from '@/lib/utils'
 
 type RecorderState = 'idle' | 'recording' | 'paused' | 'stopped'
 
-function Recorder({ onReady }: { onReady: (ready: boolean) => void }) {
+function Recorder({ onReady }: { onReady: (recording: Blob | null) => void }) {
   const [state, setState] = useState<RecorderState>('idle')
   const [seconds, setSeconds] = useState(0)
   const [level, setLevel] = useState(0)
@@ -49,7 +50,7 @@ function Recorder({ onReady }: { onReady: (ready: boolean) => void }) {
         const blob = new Blob(chunksRef.current, { type: recorder.mimeType || 'audio/webm' })
         const url = URL.createObjectURL(blob)
         setAudioUrl(url)
-        onReady(true)
+        onReady(blob)
       }
       const context = new AudioContext()
       const analyser = context.createAnalyser()
@@ -87,7 +88,7 @@ function Recorder({ onReady }: { onReady: (ready: boolean) => void }) {
 
   const reset = () => {
     if (audioUrl) URL.revokeObjectURL(audioUrl)
-    setAudioUrl(null); setSeconds(0); setState('idle'); onReady(false)
+    setAudioUrl(null); setSeconds(0); setState('idle'); onReady(null)
   }
 
   const time = `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`
@@ -113,12 +114,14 @@ function Recorder({ onReady }: { onReady: (ready: boolean) => void }) {
 
 export function NewMeetingPage() {
   const navigate = useNavigate()
+  const { toast } = useToast()
   const [title, setTitle] = useState('')
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10))
   const [tab, setTab] = useState('upload')
   const [file, setFile] = useState<File | null>(null)
-  const [recordingReady, setRecordingReady] = useState(false)
+  const [recording, setRecording] = useState<Blob | null>(null)
   const [consent, setConsent] = useState(false)
+  const [numSpeakers, setNumSpeakers] = useState('')
   const [dragging, setDragging] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const fileInput = useRef<HTMLInputElement>(null)
@@ -128,14 +131,18 @@ export function NewMeetingPage() {
     if (!candidate.type.startsWith('audio/') && !candidate.type.startsWith('video/')) return
     setFile(candidate)
   }
-  const sourceReady = tab === 'upload' ? Boolean(file) : recordingReady
+  const sourceReady = tab === 'upload' ? Boolean(file) : Boolean(recording)
   const canSubmit = title.trim() && date && consent && sourceReady && !submitting
   const submit = async () => {
     if (!canSubmit) return
     setSubmitting(true)
     try {
-      const meeting = await createMeeting({ title: title.trim(), date, source: tab === 'upload' ? 'upload' : 'recording', fileName: file?.name })
+      const source = tab === 'upload' ? 'upload' : 'recording'
+      const payload = source === 'upload' ? file : recording
+      const meeting = await createMeeting({ title: title.trim(), date, source, fileName: file?.name ?? 'recording.webm', file: payload ?? undefined, consent_confirmed: consent, num_speakers: numSpeakers ? Number(numSpeakers) : undefined })
       navigate(`/meetings/${meeting.id}`)
+    } catch (reason) {
+      toast('Не удалось создать совещание', reason instanceof Error ? reason.message : 'Повторите попытку')
     } finally { setSubmitting(false) }
   }
 
@@ -146,6 +153,7 @@ export function NewMeetingPage() {
         <div className="space-y-2"><Label htmlFor="meeting-title">Название совещания</Label><Input id="meeting-title" value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Например, Оперативное совещание" /></div>
         <div className="space-y-2"><Label htmlFor="meeting-date">Дата</Label><div className="relative"><CalendarDays className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-muted-foreground" /><Input id="meeting-date" type="date" className="pl-9" value={date} onChange={(event) => setDate(event.target.value)} /></div></div>
       </div>
+      <div className="max-w-xs space-y-2"><Label htmlFor="num-speakers">Количество говорящих (необязательно)</Label><Input id="num-speakers" type="number" min="1" max="32" value={numSpeakers} onChange={(event) => setNumSpeakers(event.target.value)} placeholder="Например, 2" /><p className="text-xs text-muted-foreground">Подсказка для диаризации; не гарантирует правильное разделение голосов.</p></div>
 
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList className="grid w-full grid-cols-2"><TabsTrigger value="upload"><UploadCloud className="mr-2 h-4 w-4" />Загрузить файл</TabsTrigger><TabsTrigger value="record"><Mic className="mr-2 h-4 w-4" />Записать сейчас</TabsTrigger></TabsList>
@@ -156,7 +164,7 @@ export function NewMeetingPage() {
           </button>
           <input ref={fileInput} type="file" accept="audio/*,video/*" className="hidden" onChange={(event) => pickFile(event.target.files?.[0])} />
         </TabsContent>
-        <TabsContent value="record"><Recorder onReady={setRecordingReady} /></TabsContent>
+        <TabsContent value="record"><Recorder onReady={setRecording} /></TabsContent>
       </Tabs>
 
       <div className="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50/70 p-4">

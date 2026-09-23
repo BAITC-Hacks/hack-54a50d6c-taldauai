@@ -1,0 +1,5 @@
+[
+  {"audio": "../data/demo_clips/aidana_first.wav", "voice": "Aru", "reference": "Мен Айданамын. Данияр, ертең договорды тексеріп, замечания жіберіңіз."},
+  {"audio": "../data/demo_clips/daniyar.wav", "voice": "Milena", "reference": "Я Данияр, договор проверю завтра. Айдана, подготовьте отчёт до пятницы."},
+  {"audio": "../data/demo_clips/aidana_last.wav", "voice": "Aru", "reference": "Жақсы, есепті жұмаға дейін дайындаймын."}
+]

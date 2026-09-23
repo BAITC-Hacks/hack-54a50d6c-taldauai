@@ -4,6 +4,13 @@ frontend/dist/
 *.tsbuildinfo
 frontend/vite.config.js
 frontend/vite.config.d.ts
+backend/data/uploads/*
+!backend/data/uploads/.gitkeep
 __pycache__/
 .venv/
+models/
+data/
+.uv-cache/
+.pytest_cache/
+*.pyc
 .DS_Store
