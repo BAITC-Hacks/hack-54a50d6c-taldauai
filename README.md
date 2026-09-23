@@ -127,3 +127,5 @@ Teams/Zoom/Meet, голосовая идентификация, PDF и СЭД п
 Организационный план команды: [HACKATHON_PLAN.md](HACKATHON_PLAN.md).
 Исходные требования: [CASE_REQUIREMENTS.md](CASE_REQUIREMENTS.md).
 Проверка поручений и минутного совещания: [ML_RUN.md](ML_RUN.md#приёмка-по-тз-и-экспорт).
+Пилот дообучения ASR на KSC2 и отдельная проверка смешанной речи:
+[TRAINING.md](TRAINING.md).
