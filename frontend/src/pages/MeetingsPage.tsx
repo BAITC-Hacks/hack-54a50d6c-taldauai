@@ -36,8 +36,8 @@ export function MeetingsPage() {
         <p className="td-page-subtitle">Протоколы, записи и поручения команды</p>
       </div>
       <div className="flex shrink-0 flex-wrap gap-2">
-        <Link to="/new"><Button variant="outline"><Upload className="h-4 w-4" /><span className="hidden sm:inline">Загрузить запись</span><span className="sm:hidden">Загрузить</span></Button></Link>
-        <Link to="/live"><Button><Mic className="h-4 w-4" /><span className="hidden sm:inline">Запустить ассистента</span><span className="sm:hidden">Ассистент</span></Button></Link>
+        <Link to="/app/new"><Button variant="outline"><Upload className="h-4 w-4" /><span className="hidden sm:inline">Загрузить запись</span><span className="sm:hidden">Загрузить</span></Button></Link>
+        <Link to="/app/live"><Button><Mic className="h-4 w-4" /><span className="hidden sm:inline">Запустить ассистента</span><span className="sm:hidden">Ассистент</span></Button></Link>
       </div>
     </header>
 
@@ -61,12 +61,12 @@ export function MeetingsPage() {
           <FileAudio className="mx-auto mb-4 h-8 w-8 text-[#aaa]" strokeWidth={1.4} />
           <h3 className="text-[17px] font-medium">{query ? 'Ничего не найдено' : 'Здесь пока пусто'}</h3>
           <p className="mb-5 mt-2 text-[13px] leading-7 text-[#777]">{query ? 'Попробуй изменить запрос.' : 'Создай первое совещание: запусти ассистента или загрузи готовую запись.'}</p>
-          {!query && <Link to="/live"><Button><Mic className="h-4 w-4" />Запустить ассистента</Button></Link>}
+          {!query && <Link to="/app/live"><Button><Mic className="h-4 w-4" />Запустить ассистента</Button></Link>}
         </div>}
         {!loading && !loadError && filtered.map((meeting) => {
           const complete = meeting.status === 'done' || meeting.status === 'Протокол готов'
           const failed = meeting.status === 'failed' || meeting.status === 'error'
-          return <Link to={`/meetings/${meeting.id}`} key={meeting.id} className="td-meeting-row group">
+          return <Link to={`/app/meetings/${meeting.id}`} key={meeting.id} className="td-meeting-row group">
             <FileAudio className="h-5 w-5 shrink-0 text-[#858585]" strokeWidth={1.6} />
             <div className="min-w-0 flex-1">
               <div className="mb-1 flex flex-wrap items-center gap-x-3 gap-y-1">
