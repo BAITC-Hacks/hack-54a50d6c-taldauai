@@ -21,15 +21,16 @@ export interface ActionItem {
   meeting_id: string
   source_task_id?: string | null
   task: string
-  assignee: string
-  speaker_label: string
+  assignee: string | null
+  speaker_label: string | null
   assigner_speaker_label?: string | null
-  deadline_raw: string
+  deadline_raw: string | null
   deadline_date: string | null
   status: 'in_progress' | 'done'
   urgency: 'high' | 'medium' | 'low'
   quote: string
   timestamp: number
+  revision?: number
   needs_review?: boolean
   source_segment_ids?: string[]
   reminded_at: string | null

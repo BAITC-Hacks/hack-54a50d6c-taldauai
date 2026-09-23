@@ -43,7 +43,7 @@ class PostgreSQLWorkflowTests(unittest.TestCase):
         cls.addClassCleanup(cls.engine.dispose)
         cls.sessions = sessionmaker(bind=cls.engine, expire_on_commit=False)
         with cls.engine.connect() as conn:
-            assert conn.scalar(text("SELECT version_num FROM alembic_version")) == "20260923_0002"
+            assert conn.scalar(text("SELECT version_num FROM alembic_version")) == "20260923_0003"
 
     @classmethod
     def cleanup_schema(cls):
@@ -56,7 +56,7 @@ class PostgreSQLWorkflowTests(unittest.TestCase):
         self.uploads = tempfile.TemporaryDirectory(prefix="taldau-test-upload-")
         self.addCleanup(self.uploads.cleanup)
         for name, value in (("uploads_dir", Path(self.uploads.name)),
-                            ("ml_result_fixture", None), ("asr_backend", "local_ml"),
+                            ("ml_result_fixture", None), ("reminders_enabled", False), ("asr_backend", "local_ml"),
                             ("llm_backend", "local_ml")):
             previous = getattr(settings, name)
             object.__setattr__(settings, name, value)
@@ -106,12 +106,15 @@ class PostgreSQLWorkflowTests(unittest.TestCase):
         edited = self.client.patch(f"/api/participants/{participant['id']}",
                                   json={"name": "Проверенное имя", "role": "Участник"})
         self.assertEqual(edited.status_code, 200)
+        meeting = self.client.get(f"/api/meetings/{meeting_id}").json()
         for action in meeting["action_items"]:
             action_url = f"/api/action-items/{action['id']}"
             self.assertEqual(self.client.post(action_url + "/remind").status_code, 409)
-            invalid = self.client.patch(action_url, json={"deadline_date": None, "needs_review": False})
+            invalid = self.client.patch(action_url, json={"deadline_date": None, "needs_review": False, "expected_revision": action["revision"]})
             self.assertEqual(invalid.status_code, 422)
-            confirmed = self.client.patch(action_url, json={"assignee": "Марат", "deadline_date": "2026-10-01", "needs_review": False})
+            edited = self.client.patch(action_url, json={"assignee": "Марат", "speaker_label": None, "deadline_date": "2026-10-01", "expected_revision": action["revision"]})
+            self.assertEqual(edited.status_code, 200, edited.text)
+            confirmed = self.client.patch(action_url, json={"needs_review": False, "expected_revision": edited.json()["revision"]})
             self.assertEqual(confirmed.status_code, 200, confirmed.text)
         self.engine.dispose()
         with TestClient(app) as restarted_client:
@@ -125,6 +128,71 @@ class PostgreSQLWorkflowTests(unittest.TestCase):
         self.assertIn("Протокол совещания", xml)
         self.assertIn("Марат", xml)
         self.assertIn("01.10.2026", xml)
+
+    def test_manual_edit_stale_confirmation_and_automatic_reminders(self):
+        from datetime import datetime, timedelta
+        from zoneinfo import ZoneInfo
+        from app.services.reminders import generate_notifications
+        now = datetime.now(ZoneInfo(settings.timezone))
+        today = now.date()
+        result = json.loads((PROJECT_ROOT / "examples/results/acceptance-result.json").read_text())
+        with patch.object(processor, "run_ml_pipeline", return_value=result):
+            meeting_id = self.upload().json()["id"]
+        base = f"/api/meetings/{meeting_id}/action-items"
+        self.assertEqual(self.client.post(base, json={"task": "  "}).status_code, 422)
+        action = self.client.post(base, json={"task": "Согласовать договор", "assignee": "Внешний юридический отдел", "deadline_date": str(today)}).json()
+        self.assertTrue(action["needs_review"])
+        self.assertIsNone(action["speaker_label"])
+        url = f"/api/action-items/{action['id']}"
+        def edit(payload, revision=None):
+            return self.client.patch(url, json={**payload, "expected_revision": revision or action["revision"]})
+        generate_notifications(self.sessions, now)
+        self.assertFalse(any(n["action_item_id"] == action["id"] for n in self.client.get("/api/notifications").json()))
+        for key in ("task", "status", "urgency", "needs_review"):
+            self.assertEqual(edit({key: None}).status_code, 422)
+        self.assertEqual(edit({"task": "  "}).status_code, 422)
+        action = edit({"needs_review": False}).json()
+        generate_notifications(self.sessions, now)
+        generate_notifications(self.sessions, now)
+        notices = [n for n in self.client.get("/api/notifications").json() if n["action_item_id"] == action["id"]]
+        self.assertEqual(len(notices), 1)
+        self.assertEqual(notices[0]["kind"], "due_soon")
+        self.assertEqual(self.client.patch(f"/api/notifications/{notices[0]['id']}/read").status_code, 200)
+        self.engine.dispose()
+        self.assertTrue(next(n for n in self.client.get("/api/notifications").json() if n["id"] == notices[0]["id"])["read_at"])
+        old_revision = action["revision"]
+        action = edit({"task": "Согласовать новую редакцию договора"}).json()
+        self.assertTrue(action["needs_review"])
+        self.assertEqual(edit({"needs_review": False}, old_revision).status_code, 409)
+        self.assertEqual(self.client.post(url + "/remind").status_code, 409)
+        self.assertFalse(any(n["action_item_id"] == action["id"] for n in self.client.get("/api/notifications").json()))
+        action = edit({"deadline_date": str(today - timedelta(days=1))}).json()
+        action = edit({"needs_review": False}).json()
+        generate_notifications(self.sessions, now)
+        notices = [n for n in self.client.get("/api/notifications").json() if n["action_item_id"] == action["id"]]
+        self.assertEqual(len(notices), 1)
+        self.assertEqual(notices[0]["kind"], "overdue")
+        self.assertIsNone(notices[0]["read_at"])
+        action = edit({"status": "done"}).json()
+        self.assertFalse(action["needs_review"])
+        self.assertFalse(any(n["action_item_id"] == action["id"] for n in self.client.get("/api/notifications").json()))
+        self.assertEqual(self.client.delete(url).status_code, 204)
+
+    def test_renaming_linked_participant_requires_review(self):
+        result = json.loads((PROJECT_ROOT / "examples/results/acceptance-result.json").read_text())
+        with patch.object(processor, "run_ml_pipeline", return_value=result):
+            meeting_id = self.upload().json()["id"]
+        meeting = self.client.get(f"/api/meetings/{meeting_id}").json()
+        person = meeting["participants"][0]
+        action = self.client.post(f"/api/meetings/{meeting_id}/action-items", json={
+            "task": "Подготовить справку", "assignee": person["name"], "speaker_label": person["speaker_label"], "deadline_date": "2026-10-01"}).json()
+        url = f"/api/action-items/{action['id']}"
+        action = self.client.patch(url, json={"needs_review": False, "expected_revision": action["revision"]}).json()
+        self.client.patch(f"/api/participants/{person['id']}", json={"name": "Уточнённое имя", "role": "Участник"})
+        revised = next(a for a in self.client.get(f"/api/meetings/{meeting_id}").json()["action_items"] if a["id"] == action["id"])
+        self.assertTrue(revised["needs_review"])
+        self.assertEqual(revised["assignee"], "Уточнённое имя")
+        self.assertGreater(revised["revision"], action["revision"])
 
     def test_exception_is_persisted_as_failed_without_fake_results(self):
         with patch.object(processor, "run_ml_pipeline", side_effect=RuntimeError("ML unavailable")) as run:

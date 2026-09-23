@@ -26,7 +26,7 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, init)
   if (!response.ok) {
     let message = `Ошибка API: ${response.status}`
-    try { message = (await response.json()).detail ?? message } catch { /* ответ без JSON */ }
+    try { const detail = (await response.json()).detail; message = typeof detail === 'string' ? detail : Array.isArray(detail) ? detail.map((item: { msg: string }) => item.msg).join('; ') : message } catch { /* ответ без JSON */ }
     throw new Error(message)
   }
   return response.json() as Promise<T>
@@ -118,16 +118,20 @@ export async function updateParticipant(meetingId: string, speakerLabel: string,
   if (!meeting || !participant) throw new Error('Участник не найден')
   const previousName = participant.name
   Object.assign(participant, patch, { auto_detected: false })
-  meeting.action_items.forEach((item) => { if (item.speaker_label === speakerLabel || item.assignee === previousName) item.assignee = patch.name })
+  meeting.action_items.forEach((item) => { if (item.speaker_label === speakerLabel || item.assignee === previousName) { item.assignee = patch.name; item.needs_review = true; item.revision = (item.revision ?? 1) + 1 } })
   persistMocks()
   return mockWait(meeting)
 }
 
-export async function updateActionItem(meetingId: string, actionId: string, patch: Partial<Pick<ActionItem, 'task' | 'assignee' | 'speaker_label' | 'deadline_date' | 'status' | 'urgency' | 'needs_review'>>): Promise<ActionItem> {
+export async function updateActionItem(meetingId: string, actionId: string, patch: Partial<Pick<ActionItem, 'task' | 'assignee' | 'speaker_label' | 'deadline_date' | 'status' | 'urgency' | 'needs_review'>> & { expected_revision?: number }): Promise<ActionItem> {
   if (!USE_MOCKS) return apiFetch(`/api/action-items/${encodeURIComponent(actionId)}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch) })
   const action = mockMeetings.find((item) => item.id === meetingId)?.action_items.find((item) => item.id === actionId)
   if (!action) throw new Error('Поручение не найдено')
+  if (patch.expected_revision !== (action.revision ?? 1)) throw new Error('Поручение изменилось. Обновите страницу')
+  const reviewChanged = ['task', 'assignee', 'speaker_label', 'deadline_date', 'urgency'].some(key => key in patch && patch[key as keyof typeof patch] !== action[key as keyof ActionItem])
   Object.assign(action, patch)
+  if (reviewChanged) action.needs_review = true
+  action.revision = (action.revision ?? 1) + 1
   persistMocks()
   return mockWait(action)
 }
@@ -170,4 +174,20 @@ export async function exportMeetingDocx(meetingId: string): Promise<void> {
   link.download = filename
   link.click()
   URL.revokeObjectURL(url)
+}
+
+
+export async function createActionItem(meetingId: string, payload: { task: string; assignee: string | null; speaker_label: string | null; deadline_date: string | null }): Promise<ActionItem> {
+  if (USE_MOCKS) throw new Error('Добавление поручений доступно при подключённом API')
+  return apiFetch(`/api/meetings/${encodeURIComponent(meetingId)}/action-items`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+}
+
+export interface Notification {
+  id: number; meeting_id: string; assignee: string; kind: string; message: string; created_at: string; read_at: string | null
+}
+export async function getNotifications(): Promise<Notification[]> {
+  return USE_MOCKS ? [] : apiFetch('/api/notifications')
+}
+export async function readNotification(id: number): Promise<void> {
+  await apiFetch(`/api/notifications/${id}/read`, { method: 'PATCH' })
 }

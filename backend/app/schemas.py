@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import date, datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class SegmentOut(BaseModel):
@@ -44,6 +44,7 @@ class ActionItemOut(BaseModel):
     timestamp: float
     needs_review: bool
     source_segment_ids: list[str]
+    revision: int
     reminded_at: datetime | None
 
 
@@ -71,11 +72,22 @@ class MeetingOut(BaseModel):
 
 
 class ParticipantPatch(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
     name: str = Field(min_length=1, max_length=255)
     role: str = Field(min_length=1, max_length=500)
 
 
 class ActionItemPatch(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+    expected_revision: int = Field(ge=1)
+
+    @field_validator("task", "status", "urgency", "needs_review")
+    @classmethod
+    def reject_null(cls, value):
+        if value is None:
+            raise ValueError("Поле не может быть null")
+        return value
+
     assignee: str | None = Field(default=None, min_length=1, max_length=255)
     speaker_label: str | None = Field(default=None, min_length=1, max_length=50)
     deadline_date: date | None = None
@@ -88,3 +100,11 @@ class ActionItemPatch(BaseModel):
 class ReminderOut(BaseModel):
     text: str
     action_item: ActionItemOut
+
+
+class ActionItemCreate(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+    task: str = Field(min_length=1)
+    assignee: str | None = Field(default=None, min_length=1, max_length=255)
+    speaker_label: str | None = None
+    deadline_date: date | None = None

@@ -15,9 +15,10 @@ from sqlalchemy.orm import Session, selectinload
 
 from .config import settings
 from .database import get_db
-from .models import ActionItem, Meeting, Participant
+from .models import ActionItem, Meeting, Participant, Notification
 from .schemas import (
     ActionItemOut,
+    ActionItemCreate,
     ActionItemPatch,
     ActionItemWithState,
     MeetingOut,
@@ -29,7 +30,9 @@ from .services.export import build_protocol_docx
 from .services.processor import process_meeting
 
 
-app = FastAPI(title="TaldauAI API", version="1.0.0")
+from .services.reminders import lifespan, active_notifications
+
+app = FastAPI(lifespan=lifespan, title="TaldauAI API", version="1.0.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
@@ -57,7 +60,7 @@ def _action_state(action: ActionItem) -> str:
         return "done"
     if action.deadline_date is None:
         return "in_progress"
-    remaining = (action.deadline_date - date_type.today()).days
+    remaining = (action.deadline_date - datetime.now(ZoneInfo(settings.timezone)).date()).days
     if remaining < 0:
         return "overdue"
     if remaining <= 2:
@@ -132,14 +135,13 @@ def patch_participant(participant_id: int, payload: ParticipantPatch, session: S
     participant.name = payload.name.strip()
     participant.role = payload.role.strip()
     participant.auto_detected = False
-    session.execute(
-        update(ActionItem)
-        .where(
-            ActionItem.meeting_id == participant.meeting_id,
-            (ActionItem.speaker_label == participant.speaker_label) | (ActionItem.assignee == previous_name),
+    if previous_name != participant.name:
+        session.execute(
+            update(ActionItem).where(
+                ActionItem.meeting_id == participant.meeting_id,
+                ActionItem.speaker_label == participant.speaker_label,
+            ).values(assignee=participant.name, needs_review=True, revision=ActionItem.revision + 1)
         )
-        .values(assignee=participant.name)
-    )
     session.commit()
     session.refresh(participant)
     return participant
@@ -147,18 +149,73 @@ def patch_participant(participant_id: int, payload: ParticipantPatch, session: S
 
 @app.patch("/api/action-items/{action_id}", response_model=ActionItemOut)
 def patch_action_item(action_id: str, payload: ActionItemPatch, session: Session = Depends(get_db)) -> ActionItem:
-    action = session.get(ActionItem, action_id)
+    action = session.scalar(select(ActionItem).where(ActionItem.id == action_id).with_for_update())
     if action is None:
         raise HTTPException(status_code=404, detail="Поручение не найдено")
-    for field, value in payload.model_dump(exclude_unset=True).items():
-        if isinstance(value, str):
-            value = value.strip()
+    if payload.expected_revision != action.revision:
+        raise HTTPException(status_code=409, detail="Поручение изменилось. Обновите страницу и проверьте новую версию")
+    previous_review = action.needs_review
+    changes = payload.model_dump(exclude_unset=True, exclude={"expected_revision"})
+    changed = any(getattr(action, key) != value for key, value in changes.items() if key != "needs_review")
+    if changed and changes.get("needs_review") is False:
+        raise HTTPException(status_code=422, detail="Сначала сохраните изменения, затем подтвердите поручение отдельно")
+    if "assignee" in changes and "speaker_label" not in changes and changes["assignee"] != action.assignee:
+        changes["speaker_label"] = None
+    for field, value in changes.items():
         setattr(action, field, value)
+    _validate_assignee(session, action)
+    review_changed = any(key in changes for key in ("task", "assignee", "speaker_label", "deadline_date", "urgency")) and changed
+    if review_changed:
+        action.needs_review = True
     if action.needs_review is False and (not action.assignee or action.deadline_date is None):
         raise HTTPException(status_code=422, detail="Укажите ответственного и срок перед подтверждением")
+    if changed or action.needs_review != previous_review:
+        action.revision += 1
     session.commit()
     session.refresh(action)
     return action
+
+
+def _validate_assignee(session: Session, action: ActionItem) -> None:
+    if action.speaker_label:
+        participant = session.scalar(select(Participant).where(
+            Participant.meeting_id == action.meeting_id,
+            Participant.speaker_label == action.speaker_label,
+        ))
+        if participant is None or participant.name != action.assignee:
+            raise HTTPException(status_code=422, detail="Ответственный не соответствует выбранному говорящему")
+
+
+@app.post("/api/meetings/{meeting_id}/action-items", response_model=ActionItemOut, status_code=201)
+def create_action_item(meeting_id: str, payload: ActionItemCreate, session: Session = Depends(get_db)) -> ActionItem:
+    meeting = _meeting_or_404(session, meeting_id)
+    if meeting.status != "done":
+        raise HTTPException(status_code=409, detail="Дождитесь завершения обработки")
+    action = ActionItem(id=f"manual-{uuid4().hex}", meeting_id=meeting_id,
+                        **payload.model_dump(), quote="Добавлено секретарём", timestamp=0,
+                        needs_review=True, source_segment_ids=[], status="in_progress", urgency="medium")
+    _validate_assignee(session, action)
+    session.add(action)
+    session.commit()
+    session.refresh(action)
+    return action
+
+
+@app.get("/api/notifications")
+def list_notifications(session: Session = Depends(get_db)) -> list[dict]:
+    return [dict(id=n.id, action_item_id=a.id, meeting_id=a.meeting_id, assignee=a.assignee,
+                 kind=n.kind, message=n.message, created_at=n.created_at, read_at=n.read_at)
+            for n, a in session.execute(active_notifications()).all()]
+
+
+@app.patch("/api/notifications/{notification_id}/read")
+def read_notification(notification_id: int, session: Session = Depends(get_db)) -> dict:
+    notification = session.get(Notification, notification_id)
+    if notification is None:
+        raise HTTPException(status_code=404, detail="Напоминание не найдено")
+    notification.read_at = notification.read_at or datetime.now(timezone.utc)
+    session.commit()
+    return {"id": notification.id, "read_at": notification.read_at}
 
 
 @app.delete("/api/action-items/{action_id}", status_code=204)

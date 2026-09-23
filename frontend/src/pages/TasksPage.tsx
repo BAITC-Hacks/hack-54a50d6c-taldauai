@@ -50,7 +50,7 @@ export function TasksPage() {
   const [reminding, setReminding] = useState<EnrichedAction | null>(null)
   const [saving, setSaving] = useState(false)
 
-  useEffect(() => { getAllActionItems().then(setTasks).finally(() => setLoading(false)) }, [])
+  useEffect(() => { getAllActionItems().then(setTasks).catch(() => toast('Не удалось загрузить поручения')).finally(() => setLoading(false)) }, [toast])
   const assignees = useMemo(() => Array.from(new Set(tasks.map((task) => task.assignee).filter((name): name is string => Boolean(name)))).sort(), [tasks])
   const meetings = useMemo(() => Array.from(new Map(tasks.map((task) => [task.meeting_id, task.meeting_title])).entries()), [tasks])
   const counts = useMemo(() => Object.fromEntries(statusCards.map((card) => [card.id, tasks.filter((item) => matchesStatus(item, card.id)).length])), [tasks])
@@ -58,9 +58,14 @@ export function TasksPage() {
 
   const markDone = async (task: EnrichedAction) => {
     const next = task.status === 'done' ? 'in_progress' : 'done'
-    setTasks((current) => current.map((item) => item.id === task.id ? { ...item, status: next } : item))
-    await updateActionItem(task.meeting_id, task.id, { status: next })
-    toast(next === 'done' ? 'Поручение выполнено' : 'Поручение возвращено в работу')
+    if (saving) return
+    setSaving(true)
+    try {
+      const saved = await updateActionItem(task.meeting_id, task.id, { status: next, expected_revision: task.revision ?? 1 })
+      setTasks(current => current.map(item => item.id === saved.id ? { ...item, ...saved } : item))
+      toast('Статус сохранён')
+    } catch (error) { toast('Не удалось сохранить', error instanceof Error ? error.message : undefined) }
+    finally { setSaving(false) }
   }
 
   const saveReminder = async () => {
@@ -70,8 +75,8 @@ export function TasksPage() {
       const updated = await remindActionItem(reminding.meeting_id, reminding.id)
       setTasks((current) => current.map((item) => item.id === updated.id ? { ...item, reminded_at: updated.reminded_at } : item))
       setReminding(null)
-      toast('Напоминание зафиксировано', 'Время отправки сохранено в карточке поручения.')
-    } finally { setSaving(false) }
+      toast('Напоминание зафиксировано', 'Сохранена ручная отметка. Внешняя отправка не выполняется.')
+    } catch { toast('Не удалось сохранить отметку') } finally { setSaving(false) }
   }
 
   const reminderText = reminding ? `Здравствуйте, ${reminding.assignee ?? 'ответственный'}!\n\nНапоминаем о поручении: ${reminding.task}\nСрок исполнения: ${reminding.deadline_date ? formatDate(reminding.deadline_date) : 'не указан'}\nСовещание: ${reminding.meeting_title}\n\nСсылка: ${window.location.origin}/meetings/${reminding.meeting_id}?t=${reminding.timestamp}` : ''
@@ -88,7 +93,7 @@ export function TasksPage() {
       {!loading && filtered.length === 0 && <Card><CardContent className="p-10 text-center"><ListChecks className="mx-auto mb-3 h-8 w-8 text-slate-300" /><p className="font-medium">Поручения не найдены</p><p className="mt-1 text-sm text-muted-foreground">Измените выбранные фильтры</p></CardContent></Card>}
       {!loading && filtered.map((task) => <Card key={task.id} className={`overflow-hidden ${task.status === 'done' ? 'bg-slate-50/60' : ''}`}><CardContent className="p-0"><div className="grid lg:grid-cols-[minmax(0,1fr)_230px]">
         <div className="p-5"><div className="mb-3 flex flex-wrap items-center gap-2">{deadlineBadge(task)}<Badge variant="outline">{task.urgency === 'high' ? 'Высокая срочность' : task.urgency === 'medium' ? 'Средняя срочность' : 'Низкая срочность'}</Badge>{task.needs_review && <Badge variant="warning">Требует проверки</Badge>}{task.reminded_at && <span className="flex items-center gap-1 text-[11px] text-violet-700"><Bell className="h-3 w-3" />Напоминание {formatDate(task.reminded_at, true)}</span>}</div><h3 className={`font-semibold leading-6 ${task.status === 'done' ? 'text-slate-500 line-through decoration-slate-300' : 'text-slate-900'}`}>{task.task}</h3><div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-xs text-muted-foreground"><span><span className="font-medium text-slate-600">Ответственный:</span> {task.assignee ?? 'не определён'}</span><span><span className="font-medium text-slate-600">Срок:</span> {task.deadline_date ? formatDate(task.deadline_date) : 'не указан'}</span></div><Link to={`/meetings/${task.meeting_id}?t=${task.timestamp}`} className="mt-4 inline-flex items-center gap-1 text-xs font-medium text-teal-700 hover:text-teal-900">{task.meeting_title} · {formatTime(task.timestamp)}<ChevronRight className="h-3.5 w-3.5" /></Link></div>
-        <div className="flex items-center gap-2 border-t bg-slate-50/70 p-4 lg:flex-col lg:items-stretch lg:justify-center lg:border-l lg:border-t-0"><Button variant="outline" className="flex-1" onClick={() => setReminding(task)} disabled={task.status === 'done' || task.needs_review}><Bell className="h-4 w-4" />{task.needs_review ? 'Сначала проверить' : 'Напомнить'}</Button><Button variant={task.status === 'done' ? 'secondary' : 'default'} className="flex-1" onClick={() => markDone(task)} disabled={task.needs_review}><Check className="h-4 w-4" />{task.status === 'done' ? 'Вернуть в работу' : 'Выполнено'}</Button></div>
+        <div className="flex items-center gap-2 border-t bg-slate-50/70 p-4 lg:flex-col lg:items-stretch lg:justify-center lg:border-l lg:border-t-0"><Button variant="outline" className="flex-1" onClick={() => setReminding(task)} disabled={task.status === 'done' || task.needs_review}><Bell className="h-4 w-4" />{task.needs_review ? 'Сначала проверить' : 'Напомнить'}</Button><Button variant={task.status === 'done' ? 'secondary' : 'default'} className="flex-1" onClick={() => markDone(task)} disabled={saving || task.needs_review}><Check className="h-4 w-4" />{task.status === 'done' ? 'Вернуть в работу' : 'Выполнено'}</Button></div>
       </div></CardContent></Card>)}
     </div>
 

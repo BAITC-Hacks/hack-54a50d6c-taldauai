@@ -41,7 +41,7 @@ for _name in ("TALDAU_ASR_MODEL", "TALDAU_DIARIZATION_MODEL"):
 class Settings:
     database_url: str = os.getenv(
         "DATABASE_URL",
-        "postgresql+psycopg://almazbukayev@localhost:5433/taldau",
+        "postgresql+psycopg://postgres:postgres@localhost:5433/taldau",
     )
     asr_backend: str = os.getenv("ASR_BACKEND", "local_ml")
     llm_backend: str = os.getenv("LLM_BACKEND", "local_ml")
@@ -49,6 +49,8 @@ class Settings:
     llm_model: str = os.getenv("LLM_MODEL", "qwen2.5:7b")
     uploads_dir: Path = BACKEND_DIR / "data" / "uploads"
     ml_result_fixture: Path | None = _optional_project_path("TALDAU_ML_RESULT_FIXTURE")
+    reminders_enabled: bool = os.getenv("TALDAU_REMINDERS_ENABLED", "true").lower() == "true"
+    reminders_interval: float = max(1, float(os.getenv("TALDAU_REMINDERS_INTERVAL_SECONDS", "60")))
     timezone: str = os.getenv("TALDAU_TIMEZONE", "Asia/Almaty")
 
 
