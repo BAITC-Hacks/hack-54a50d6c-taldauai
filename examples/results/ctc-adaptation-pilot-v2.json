@@ -1,0 +1,257 @@
+{
+  "method": "CTC head adaptation; frozen encoders; CPU; FP32 features and head; whole short clips without VAD",
+  "base_sha256": "92fe1791d7c93f385fc10a959dd216caa98c6a571df72f11d1605c6327393b88",
+  "trainable_parameters": 72239,
+  "seed": 42,
+  "epochs": 3,
+  "learning_rate": 1e-05,
+  "target_convention": "_|transcript with | word separators|_",
+  "exported_head_verified": true,
+  "train_clips": 256,
+  "dev_clips": 64,
+  "skipped_train": [],
+  "baseline_dev": {
+    "character_errors": 54,
+    "reference_chars": 4901,
+    "word_errors": 46,
+    "reference_words": 669,
+    "clips": 64,
+    "cer": 0.011018159559273618,
+    "wer": 0.0687593423019432
+  },
+  "history": [
+    {
+      "epoch": 1,
+      "train_loss": 0.05389045826257188,
+      "dev": {
+        "character_errors": 55,
+        "reference_chars": 4901,
+        "word_errors": 47,
+        "reference_words": 669,
+        "clips": 64,
+        "cer": 0.011222199551112018,
+        "wer": 0.07025411061285501
+      }
+    },
+    {
+      "epoch": 2,
+      "train_loss": 0.053492392093886565,
+      "dev": {
+        "character_errors": 56,
+        "reference_chars": 4901,
+        "word_errors": 47,
+        "reference_words": 669,
+        "clips": 64,
+        "cer": 0.011426239542950418,
+        "wer": 0.07025411061285501
+      }
+    },
+    {
+      "epoch": 3,
+      "train_loss": 0.05311755601186974,
+      "dev": {
+        "character_errors": 55,
+        "reference_chars": 4901,
+        "word_errors": 47,
+        "reference_words": 669,
+        "clips": 64,
+        "cer": 0.011222199551112018,
+        "wer": 0.07025411061285501
+      }
+    }
+  ],
+  "selected_epoch": 0,
+  "tests": {
+    "test_0": {
+      "dataset": "issai/Kazakh_Speech_Corpus_2",
+      "revision": "cececbec1049f93f34a7421552500da01971ead8",
+      "baseline": {
+        "character_errors": 96,
+        "reference_chars": 4900,
+        "word_errors": 62,
+        "reference_words": 666,
+        "clips": 64,
+        "cer": 0.019591836734693877,
+        "wer": 0.09309309309309309
+      },
+      "selected": {
+        "character_errors": 96,
+        "reference_chars": 4900,
+        "word_errors": 62,
+        "reference_words": 666,
+        "clips": 64,
+        "cer": 0.019591836734693877,
+        "wer": 0.09309309309309309
+      },
+      "by_language": {
+        "kk": {
+          "baseline": {
+            "character_errors": 96,
+            "reference_chars": 4900,
+            "word_errors": 62,
+            "reference_words": 666,
+            "clips": 64,
+            "cer": 0.019591836734693877,
+            "wer": 0.09309309309309309
+          },
+          "selected": {
+            "character_errors": 96,
+            "reference_chars": 4900,
+            "word_errors": 62,
+            "reference_words": 666,
+            "clips": 64,
+            "cer": 0.019591836734693877,
+            "wer": 0.09309309309309309
+          }
+        }
+      }
+    },
+    "test_1": {
+      "dataset": "Tim2190/kazakh-codeswitch-asr",
+      "revision": "753d6640b4b02daf6bb73307a8572c2a710c203e",
+      "baseline": {
+        "character_errors": 199,
+        "reference_chars": 3384,
+        "word_errors": 127,
+        "reference_words": 532,
+        "clips": 31,
+        "cer": 0.05880614657210402,
+        "wer": 0.2387218045112782
+      },
+      "selected": {
+        "character_errors": 199,
+        "reference_chars": 3384,
+        "word_errors": 127,
+        "reference_words": 532,
+        "clips": 31,
+        "cer": 0.05880614657210402,
+        "wer": 0.2387218045112782
+      },
+      "by_language": {
+        "mixed": {
+          "baseline": {
+            "character_errors": 199,
+            "reference_chars": 3384,
+            "word_errors": 127,
+            "reference_words": 532,
+            "clips": 31,
+            "cer": 0.05880614657210402,
+            "wer": 0.2387218045112782
+          },
+          "selected": {
+            "character_errors": 199,
+            "reference_chars": 3384,
+            "word_errors": 127,
+            "reference_words": 532,
+            "clips": 31,
+            "cer": 0.05880614657210402,
+            "wer": 0.2387218045112782
+          }
+        }
+      }
+    },
+    "test_2": {
+      "dataset": "TaldauAI synthetic regression controls",
+      "revision": "ef960b0e017dc4421168f8241843ed6257aef21099b5d7c45b0f7a33549139de",
+      "baseline": {
+        "character_errors": 15,
+        "reference_chars": 254,
+        "word_errors": 8,
+        "reference_words": 34,
+        "clips": 5,
+        "cer": 0.05905511811023622,
+        "wer": 0.23529411764705882
+      },
+      "selected": {
+        "character_errors": 15,
+        "reference_chars": 254,
+        "word_errors": 8,
+        "reference_words": 34,
+        "clips": 5,
+        "cer": 0.05905511811023622,
+        "wer": 0.23529411764705882
+      },
+      "by_language": {
+        "kk": {
+          "baseline": {
+            "character_errors": 0,
+            "reference_chars": 44,
+            "word_errors": 0,
+            "reference_words": 6,
+            "clips": 1,
+            "cer": 0.0,
+            "wer": 0.0
+          },
+          "selected": {
+            "character_errors": 0,
+            "reference_chars": 44,
+            "word_errors": 0,
+            "reference_words": 6,
+            "clips": 1,
+            "cer": 0.0,
+            "wer": 0.0
+          }
+        },
+        "mixed": {
+          "baseline": {
+            "character_errors": 14,
+            "reference_chars": 159,
+            "word_errors": 7,
+            "reference_words": 20,
+            "clips": 3,
+            "cer": 0.0880503144654088,
+            "wer": 0.35
+          },
+          "selected": {
+            "character_errors": 14,
+            "reference_chars": 159,
+            "word_errors": 7,
+            "reference_words": 20,
+            "clips": 3,
+            "cer": 0.0880503144654088,
+            "wer": 0.35
+          }
+        },
+        "ru": {
+          "baseline": {
+            "character_errors": 1,
+            "reference_chars": 51,
+            "word_errors": 1,
+            "reference_words": 8,
+            "clips": 1,
+            "cer": 0.0196078431372549,
+            "wer": 0.125
+          },
+          "selected": {
+            "character_errors": 1,
+            "reference_chars": 51,
+            "word_errors": 1,
+            "reference_words": 8,
+            "clips": 1,
+            "cer": 0.0196078431372549,
+            "wer": 0.125
+          }
+        }
+      }
+    }
+  },
+  "elapsed_seconds": 5.64,
+  "upstream_overlap_note": "Base model already used KSC2. Tim2190 was held out from this adaptation; upstream overlap is unknown.",
+  "manifests": {
+    "train": "data/corpora/ksc2/train.json",
+    "dev": "data/corpora/ksc2/dev.json",
+    "test": [
+      "data/corpora/ksc2/test.json",
+      "data/corpora/codeswitch/test.json",
+      "data/corpora/synthetic_control/test.json"
+    ]
+  },
+  "manifest_sha256": {
+    "data/corpora/ksc2/train.json": "b2431afefdbb3ac86c1a957fb861b8fc1814eee6096c5b054211ffe67ef607be",
+    "data/corpora/ksc2/dev.json": "27ebeb80b8678aa7dff26866c1167f6422cbb255bb4f277fc4d30088db9f947f",
+    "data/corpora/ksc2/test.json": "f0e39a14e2b3e8cfa0c15369a5fb02c83b3479edff9c50f222d69e0bf0c071b8",
+    "data/corpora/codeswitch/test.json": "bd50faa37add2975f440e95eb4d6dcc299dcb71a4aee530c25dbeddfe2e83d22",
+    "data/corpora/synthetic_control/test.json": "16b08800dec32d07201deaf2379f90bb60e3cf83bdc2f20816e4c803a3fa7e36"
+  },
+  "manifest_hashes_added_after_run": true
+}

@@ -1,0 +1,72 @@
+[
+  {
+    "id": "ru_confirmation",
+    "language": "ru",
+    "started_at": "2026-09-23T14:00:00+05:00",
+    "speakers": [{"id": "SPEAKER_00", "display_name": "Алия"}, {"id": "SPEAKER_01", "display_name": "Марат"}],
+    "segments": [
+      {"id": "s1", "speaker_id": "SPEAKER_00", "text": "Марат, подготовьте отчёт по закупкам до пятницы."},
+      {"id": "s2", "speaker_id": "SPEAKER_01", "text": "Хорошо, отчёт по закупкам подготовлю до пятницы."}
+    ],
+    "expected": [{"assignee_name": "Марат", "due_date": "2026-09-25", "keywords": ["отч", "закуп"], "source": "s1"}]
+  },
+  {
+    "id": "kk_confirmation",
+    "language": "kk",
+    "started_at": "2026-09-23T14:00:00+05:00",
+    "speakers": [{"id": "SPEAKER_00", "display_name": "Марат"}, {"id": "SPEAKER_01", "display_name": "Алия"}],
+    "segments": [
+      {"id": "s1", "speaker_id": "SPEAKER_00", "text": "Алия, ертең есепті дайындап жіберіңіз."},
+      {"id": "s2", "speaker_id": "SPEAKER_01", "text": "Жақсы, есепті ертең дайындап жіберемін."}
+    ],
+    "expected": [{"assignee_name": "Алия", "due_date": "2026-09-24", "keywords": ["есеп|отч"], "source": "s1"}]
+  },
+  {
+    "id": "mixed_two_assignees",
+    "language": "mixed",
+    "started_at": "2026-09-23T14:00:00+05:00",
+    "speakers": [{"id": "SPEAKER_00", "display_name": "Алия"}, {"id": "SPEAKER_01", "display_name": "Марат"}],
+    "segments": [
+      {"id": "s1", "speaker_id": "SPEAKER_00", "text": "Марат, ертең договорды тексеріңіз."},
+      {"id": "s2", "speaker_id": "SPEAKER_01", "text": "Хорошо, договор проверю завтра. Алия, подготовьте бюджет до 25 сентября."},
+      {"id": "s3", "speaker_id": "SPEAKER_00", "text": "Жақсы, бюджетті дайындаймын."}
+    ],
+    "expected": [
+      {"assignee_name": "Марат", "due_date": "2026-09-24", "keywords": ["договор|шарт"], "source": "s1"},
+      {"assignee_name": "Алия", "due_date": "2026-09-25", "keywords": ["бюджет"], "source": "s2"}
+    ]
+  },
+  {
+    "id": "completed_and_cancelled",
+    "language": "ru",
+    "started_at": "2026-09-23T14:00:00+05:00",
+    "speakers": [{"id": "SPEAKER_00", "display_name": "Алия"}],
+    "segments": [
+      {"id": "s1", "speaker_id": "SPEAKER_00", "text": "Отчёт уже отправлен вчера. Прежнее поручение Марату проверить договор отменяем. Новых поручений нет."}
+    ],
+    "expected": []
+  },
+  {
+    "id": "unknown_owner_deadline",
+    "language": "mixed",
+    "started_at": "2026-09-23T14:00:00+05:00",
+    "speakers": [{"id": "SPEAKER_00", "display_name": null}],
+    "segments": [
+      {"id": "s1", "speaker_id": "SPEAKER_00", "text": "Договорды тексеру керек, после согласования. Кто возьмёт, пока не решили."}
+    ],
+    "expected": [{"assignee_name": null, "due_date": null, "keywords": ["договор|шарт"], "source": "s1"}]
+  },
+  {
+    "id": "two_independent_actions",
+    "language": "ru",
+    "started_at": "2026-09-23T14:00:00+05:00",
+    "speakers": [{"id": "SPEAKER_00", "display_name": "Алия"}, {"id": "SPEAKER_01", "display_name": "Марат"}],
+    "segments": [
+      {"id": "s1", "speaker_id": "SPEAKER_00", "text": "Марат, завтра проверьте договор. И отдельно подготовьте бюджет до пятницы."}
+    ],
+    "expected": [
+      {"assignee_name": "Марат", "due_date": "2026-09-24", "keywords": ["договор"], "source": "s1"},
+      {"assignee_name": "Марат", "due_date": "2026-09-25", "keywords": ["бюджет"], "source": "s1"}
+    ]
+  }
+]

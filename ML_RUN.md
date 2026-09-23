@@ -1,6 +1,8 @@
 # Запуск ML-модуля
 
 Модуль предоставляет `from ml import process_meeting` и CLI `python -m ml`.
+Для извлечения поручений используйте `TALDAU_LLM_MODEL=qwen2.5:7b`.
+KazLLM остаётся необязательной моделью подсказок.
 Он обрабатывает локальный аудиофайл и возвращает JSON по [ML_CONTRACT.md](ML_CONTRACT.md).
 Входные аудио и транскрипты отправляются только локальному Ollama на `127.0.0.1`.
 
@@ -44,7 +46,6 @@ hf download issai/LLama-3.1-KazLLM-1.0-8B-GGUF4 checkpoints_llama8b_031224_18900
 printf 'FROM %s\n' "$PWD/models/kazllm/checkpoints_llama8b_031224_18900-Q4_K_M.gguf" > models/kazllm/Modelfile
 ollama create taldau-kazllm -f models/kazllm/Modelfile
 export TALDAU_KAZLLM_MODEL=taldau-kazllm
-export TALDAU_LLM_MODEL=taldau-kazllm
 ```
 
 ISSAI распространяет KazLLM под CC-BY-NC-4.0 для некоммерческого применения;
@@ -65,16 +66,23 @@ OLLAMA_NO_CLOUD=1 ollama serve
 ```
 
 Для специализированного ASR задайте `TALDAU_ASR_ENGINE=mixed-ctc` и
-`TALDAU_ASR_MODEL="$PWD/models/mixed-stt"`. Он использует greedy CTC без KenLM;
-таймкоды слов приблизительные, из акустических кадров. Whisper сохраняется как
+`TALDAU_ASR_MODEL="$PWD/models/mixed-stt"`. По умолчанию используется greedy
+(`TALDAU_CTC_BEAM_SIZE=1`). Экспериментальный CTC prefix beam search включается
+через `TALDAU_CTC_BEAM_SIZE=8`, без KenLM; допустимый диапазон — 1–64.
+Он улучшил ASR на малом синтетическом наборе, но не улучшил извлечение
+поручений, поэтому не включён по умолчанию. Поиск суммирует вероятности акустических путей,
+а Viterbi-выравнивание сохраняет таймкоды выбранного текста. Таймкоды слов
+приблизительные, из акустических кадров. Whisper сохраняется как
 альтернатива. Сравнение на синтетических данных — в [ML_EVALUATION.md](ML_EVALUATION.md).
-Для поручений можно выбрать `TALDAU_LLM_MODEL=taldau-kazllm` после импорта KazLLM
-или `TALDAU_LLM_MODEL=qwen2.5:7b` для отдельно установленного Qwen.
+Для поручений задайте `TALDAU_LLM_MODEL=qwen2.5:7b`. KazLLM можно выбрать
+для сравнения, но на контрольном наборе она допускала пропуски и лишние задачи.
 
 В другом терминале:
 
 ```bash
 source .venv/bin/activate
+export TALDAU_LLM_MODEL=qwen2.5:7b
+python -m ml.doctor
 python -m ml ./data/meeting.wav --started-at '2026-09-23T14:00:00+05:00' --output ./data/result.json
 ```
 
@@ -91,12 +99,62 @@ result = process_meeting(
 ```
 
 `speaker_names` задаётся человеком после просмотра результата диаризации.
+Для Whisper доступны `language="ru"` / `"kk"` / `"en"` и другие поддерживаемые
+коды, а также `hotwords="имена, термины"` (до 1000 символов). Для смешанной
+речи не задавайте язык: оставьте автоматическое определение. Mixed CTC
+распознаёт только русско-казахскую речь и не поддерживает подсказки терминов.
+
+```bash
+TALDAU_ASR_ENGINE=whisper TALDAU_ASR_MODEL=models/faster-whisper-large-v3 \
+  python -m ml ./data/meeting.webm --started-at '2026-09-23T14:00:00+05:00' \
+  --language ru --hotwords 'Айдана, Данияр, TaldauAI' --output ./data/result.json
+```
+
+Поддерживаются также браузерный WebM, Opus и AAC. Запись без речи возвращает
+пустой результат с предупреждением без запуска диаризации и LLM.
+`python -m ml.evaluate` также принимает `--language` и `--hotwords` для
+сравнения распознавания на собственных эталонах. Метки языков в manifest
+служат только для подсчёта метрик и не передаются модели как подсказка.
+
 Известное число участников можно передать аргументом `num_speakers=2` либо
 CLI-флагом `--num-speakers 2`. На коротких записях число и принадлежность
 голосов всё равно нужно проверять. Pyannote получает декодированный PCM
 в памяти, что устраняет несовместимость второго декодера с FFmpeg на macOS.
 Если нет уверенной связи имени с голосом, `display_name` остаётся `null`.
 Поручения без подтверждённого исполнителя и даты имеют `needs_review: true`.
+
+Явные самопредставления могут дать `speakers[].suggested_name`; это отдельное
+неподтверждённое поле, а не `display_name`. Адресат проверяется вторым локальным
+запросом по сегменту назначения. Для длинных транскриптов выполняется проверка
+пропущенных поручений. Это не гарантирует полноту на любой записи.
+Сроки «за две недели», «екі апта ішінде», «к пятнадцатому октября»
+нормализуются кодом; рабочие дни и неопределённые периоды остаются на проверку.
+
+## Приёмка по ТЗ и экспорт
+
+ТЗ сохранено в `CASE_REQUIREMENTS.md`. После установки моделей:
+
+```bash
+mkdir -p data
+python -m ml.doctor
+python -m ml.evaluate_tasks examples/task_cases.json --output data/tasks-check.json
+python -m ml.evaluate_meeting examples/acceptance_reference.json --output data/acceptance-check.json
+python -m ml examples/audio/acceptance_mixed.wav --started-at '2026-09-23T14:00:00+05:00' --num-speakers 2 --output data/protocol.json
+python -m ml.export data/protocol.json --output data/protocol.docx
+```
+
+`evaluate_tasks` проверяет текстовое извлечение без ASR; эталонные ответы
+не передаются модели. `evaluate_meeting` запускает реальные модели с аудио;
+из эталона передаётся только известное число говорящих. Сравнение говорящих
+по преобладающему голосу в каждой тестовой реплике не заменяет стандартный DER.
+Эти сценарии используются при разработке и не являются независимым тестом.
+Исходный сценарий и генератор TTS входят в репозиторий; воспроизведение
+готового WAV не требует macOS.
+
+DOCX-экспорт работает локально без Word/LibreOffice и дополнительных
+Python-зависимостей. Для интеграции: `from ml.export import docx_bytes`.
+Документ содержит исходный транскрипт, саммари, сроки, исполнителей и ссылки
+на сегменты; неподтверждённый результат обозначен как черновик.
 
 ## Проверка
 

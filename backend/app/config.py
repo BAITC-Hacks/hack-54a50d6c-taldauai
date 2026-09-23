@@ -30,6 +30,12 @@ def _load_dotenv(path: Path) -> None:
 
 _load_dotenv(BACKEND_DIR / ".env")
 
+# The API is often started from backend/, while ML paths are repo-relative.
+for _name in ("TALDAU_ASR_MODEL", "TALDAU_DIARIZATION_MODEL"):
+    _path = _optional_project_path(_name)
+    if _path is not None:
+        os.environ[_name] = str(_path)
+
 
 @dataclass(frozen=True)
 class Settings:
@@ -37,8 +43,8 @@ class Settings:
         "DATABASE_URL",
         "postgresql+psycopg://almazbukayev@localhost:5433/taldau",
     )
-    asr_backend: str = os.getenv("ASR_BACKEND", "stub")
-    llm_backend: str = os.getenv("LLM_BACKEND", "stub")
+    asr_backend: str = os.getenv("ASR_BACKEND", "local_ml")
+    llm_backend: str = os.getenv("LLM_BACKEND", "local_ml")
     llm_base_url: str = os.getenv("LLM_BASE_URL", "http://localhost:11434/v1")
     llm_model: str = os.getenv("LLM_MODEL", "qwen2.5:7b")
     uploads_dir: Path = BACKEND_DIR / "data" / "uploads"

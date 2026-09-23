@@ -1,9 +1,10 @@
 """Local wav2vec2 CTC adapter for alibiserikbay/kazakh-russian-mixed-stt.
 
-Uses the rukk acoustic model with greedy decoding. KenLM is not loaded.
+Uses rukk with greedy or optional prefix beam decoding. KenLM is not loaded.
 """
 
 from pathlib import Path
+import os
 import wave
 
 
@@ -41,6 +42,11 @@ def transcribe(path: Path, model_dir: str, device: str) -> list[dict]:
     import numpy as np
     import torch
     from faster_whisper.vad import VadOptions, get_speech_timestamps
+    from .ctc import align_tokens, prefix_beam_search
+
+    beam_size = int(os.environ.get("TALDAU_CTC_BEAM_SIZE", "1"))
+    if not 1 <= beam_size <= 64:
+        raise ValueError("TALDAU_CTC_BEAM_SIZE must be between 1 and 64")
 
     root = Path(model_dir) / "asr" / "rukk"
     if not (root / "model.pt").is_file() or not (root / "tokens.lst").is_file():
@@ -65,7 +71,12 @@ def transcribe(path: Path, model_dir: str, device: str) -> list[dict]:
             start, end = region["start"], region["end"]
             chunk = torch.from_numpy(audio[start:end].copy()).unsqueeze(0).to(device)
             logits = model(chunk)[0]
-            ids = logits[0].argmax(-1).cpu().tolist()
+            if beam_size == 1:
+                ids = logits[0].argmax(-1).cpu().tolist()
+            else:
+                log_probs = logits[0].log_softmax(-1).cpu().numpy()
+                decoded = prefix_beam_search(log_probs, blank, beam_size)
+                ids = align_tokens(log_probs, decoded, blank)
             words = decode_words(ids, tokens, blank, round(start / 16), round((end - start) / 16))
             if words:
                 result.append({"start_ms": words[0]["start_ms"], "end_ms": words[-1]["end_ms"],

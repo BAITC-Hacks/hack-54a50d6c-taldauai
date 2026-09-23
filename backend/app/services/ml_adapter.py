@@ -110,7 +110,9 @@ def adapt_ml_result(meeting_id: str, result: dict[str, Any]) -> dict[str, Any]:
             "urgency": "medium",
             "quote": " ".join(segment["text"] for segment in source_segments),
             "timestamp": min(segment["start"] for segment in source_segments),
-            "needs_review": bool(item.get("needs_review", True)),
+            # ML confidence is not human approval. Preserve the model's flag
+            # in Meeting.ml_result, but require explicit approval in the UI.
+            "needs_review": True,
             "source_segment_ids": list(source_ids),
             "reminded_at": None,
         })
