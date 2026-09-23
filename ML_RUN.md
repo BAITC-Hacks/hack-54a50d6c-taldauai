@@ -1,5 +1,12 @@
 # Запуск ML-модуля
 
+> Этот документ описывает отдельный ML CLI и эксперименты. Для полного
+> приложения используйте [README](README.md), [macOS](docs/SETUP_MACOS.md)
+> или [Windows](docs/SETUP_WINDOWS.md): API и ML должны быть в одном окружении.
+> Базовая приёмка использует Mixed CTC, pyannote и Qwen 7B; Whisper и KazLLM
+> ниже — необязательные альтернативы. Зафиксированные ревизии и условия
+> моделей: [MODELS.md](docs/MODELS.md).
+
 Модуль предоставляет `from ml import process_meeting` и CLI `python -m ml`.
 Для извлечения поручений используйте `TALDAU_LLM_MODEL=qwen2.5:7b`.
 KazLLM остаётся необязательной моделью подсказок.
