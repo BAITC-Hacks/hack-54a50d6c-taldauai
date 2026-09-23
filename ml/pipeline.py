@@ -664,7 +664,9 @@ def process_meeting(audio_path: str, meeting_started_at: str,
         correction_warnings = _kazllm_suggestions(segments)
         raw = _extract(segments, meeting_started_at, speakers)
         tasks, summary, warnings = _validate_extraction(raw, segments, speakers, meeting_day)
-        warnings = correction_warnings + warnings
+        from .summary import summarize_meeting
+        summary, summary_warnings = summarize_meeting(segments, tasks)
+        warnings = correction_warnings + warnings + summary_warnings
         if any(s["speaker_id"] is None for s in segments):
             warnings.append("Some speech has no reliable speaker assignment; review overlapping voices and diarization")
     else:

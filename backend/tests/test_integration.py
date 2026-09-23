@@ -194,6 +194,25 @@ class PostgreSQLWorkflowTests(unittest.TestCase):
         self.assertEqual(revised["assignee"], "Уточнённое имя")
         self.assertGreater(revised["revision"], action["revision"])
 
+    def test_summary_refresh_keeps_raw_ml_and_current_task_edits(self):
+        from app import refresh_summary
+        result = json.loads((PROJECT_ROOT / "examples/results/acceptance-result.json").read_text())
+        with patch.object(processor, "run_ml_pipeline", return_value=result):
+            meeting_id = self.upload().json()["id"]
+        meeting = self.client.get(f"/api/meetings/{meeting_id}").json()
+        action = meeting["action_items"][0]
+        edited = self.client.patch(f"/api/action-items/{action['id']}", json={
+            "expected_revision": action["revision"], "assignee": "Юридический отдел", "speaker_label": None}).json()
+        with patch.object(refresh_summary, "SessionLocal", self.sessions), patch(
+                "ml.summary.summarize_meeting", return_value=("Тема встречи\nОбсудили договор.", [])) as summarize:
+            refresh_summary.refresh_summary(meeting_id)
+        self.assertIn("Юридический отдел", [a["assignee_name"] for a in summarize.call_args.args[1]])
+        saved = self.client.get(f"/api/meetings/{meeting_id}").json()
+        self.assertEqual(saved["summary"], "Тема встречи\nОбсудили договор.")
+        self.assertEqual(saved["action_items"][0], edited)
+        with self.sessions() as session:
+            self.assertEqual(session.get(Meeting, meeting_id).ml_result, result)
+
     def test_exception_is_persisted_as_failed_without_fake_results(self):
         with patch.object(processor, "run_ml_pipeline", side_effect=RuntimeError("ML unavailable")) as run:
             response = self.upload(speakers=None)

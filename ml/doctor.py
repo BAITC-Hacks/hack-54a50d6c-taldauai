@@ -40,7 +40,7 @@ def check() -> dict:
             with _local_open(base + "/api/tags", timeout=5) as response:
                 tags = json.load(response)
             models = {m["name"] for m in tags["models"]}
-            for model in dict.fromkeys(filter(None, [os.environ.get("TALDAU_LLM_MODEL", "qwen2.5:7b"), os.environ.get("TALDAU_KAZLLM_MODEL")])):
+            for model in dict.fromkeys(filter(None, [os.environ.get("TALDAU_LLM_MODEL", "qwen2.5:7b"), os.environ.get("TALDAU_KAZLLM_MODEL"), os.environ.get("TALDAU_SUMMARY_MODEL")])):
                 record("ollama_model:" + model, model in models or model + ":latest" in models,
                        "Install the local model in Ollama before running inference")
         except (OSError, ValueError, KeyError, TypeError, RuntimeError):
