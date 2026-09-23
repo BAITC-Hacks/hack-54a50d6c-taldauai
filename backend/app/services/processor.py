@@ -101,7 +101,12 @@ def process_meeting(meeting_id: str) -> None:
                 raise ValueError("Meeting or audio file is unavailable")
             audio_path = meeting.audio_path
             session.expunge(meeting)
-        if settings.asr_backend == "stub" and settings.llm_backend == "stub":
+        use_stub = (
+            settings.ml_result_fixture is None
+            and settings.asr_backend == "stub"
+            and settings.llm_backend in {"stub", "ollama"}
+        )
+        if use_stub:
             _process_stub(meeting_id, audio_path)
         else:
             _process_local_ml(meeting_id, meeting)
@@ -109,6 +114,6 @@ def process_meeting(meeting_id: str) -> None:
         with SessionLocal() as session:
             meeting = session.scalar(select(Meeting).where(Meeting.id == meeting_id))
             if meeting is not None:
-                meeting.status = "error"
+                meeting.status = "failed"
                 meeting.error_message = str(exc)
                 session.commit()

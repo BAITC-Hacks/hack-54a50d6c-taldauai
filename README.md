@@ -8,9 +8,9 @@ TaldauAI — прототип системы автоматического пр
 
 Проект состоит из React SPA и FastAPI-сервиса с PostgreSQL. Компоненты фронтенда получают и изменяют данные только через `frontend/src/api.ts`; по умолчанию этот слой обращается к `/api`, а `VITE_USE_MOCKS=true` переключает его на локальные данные из `frontend/src/mocks.ts`.
 
-FastAPI хранит совещания, участников, исходный транскрипт, подсказки KazLLM и поручения в PostgreSQL через SQLAlchemy 2. Структура базы управляется Alembic. Загруженные записи сохраняются в `backend/data/uploads`, после чего фоновая задача вызывает `ml.process_meeting`. ML-модуль локально выполняет `ffmpeg → Mixed CTC/Whisper → pyannote → KazLLM/Ollama → JSON v1`; при исключении совещание получает статус `failed`.
+FastAPI хранит совещания, участников, исходный транскрипт, подсказки KazLLM и поручения в PostgreSQL через SQLAlchemy 2. Структура базы управляется Alembic. Загруженные записи сохраняются в `backend/data/uploads`. По умолчанию локальные заглушки последовательно меняют статус `converting → transcribing → diarizing → extracting → done`. При заданном `TALDAU_ML_RESULT_FIXTURE`, `ASR_BACKEND=local` или `LLM_BACKEND=local` фоновая задача вызывает ML-адаптер/локальный `ml.process_meeting`, который выполняет `ffmpeg → Mixed CTC/Whisper → pyannote → KazLLM/Ollama → JSON v1`. При исключении совещание получает статус `failed`.
 
-Результат ML всегда считается черновиком. Backend сохраняет `warnings`, `needs_review`, `source_segment_ids`, исходный ASR-текст и полный JSON ответа. Напоминание нельзя сформировать, пока человек не подтвердил поручение; ошибочное или дублирующее поручение можно удалить.
+Для реального ML результат считается черновиком. Backend сохраняет `warnings`, `needs_review`, `source_segment_ids`, исходный ASR-текст и полный JSON ответа. Оператор может подтвердить, исправить или удалить ошибочное поручение; напоминание и экспорт заблокированы до подтверждения всех поручений.
 
 Основные маршруты:
 
@@ -25,10 +25,10 @@ FastAPI хранит совещания, участников, исходный 
 - Tailwind CSS;
 - компоненты shadcn/ui на базе Radix UI;
 - React Router;
-- MediaRecorder и Web Audio API для записи и индикации уровня звука.
+- MediaRecorder и Web Audio API для записи и индикации уровня звука;
 - Python 3.11+, FastAPI, SQLAlchemy 2, Alembic и psycopg;
 - PostgreSQL 16;
-- python-docx для экспорта протоколов.
+- python-docx для экспорта протоколов;
 - ffmpeg, faster-whisper, pyannote.audio, Mixed CTC и локальный Ollama/KazLLM для ML-пайплайна.
 
 ## Запуск
@@ -108,8 +108,11 @@ Vite запускает приложение на `http://localhost:5173` и п�
 Backend (`backend/.env`):
 
 - `DATABASE_URL` — строка подключения SQLAlchemy к PostgreSQL;
+- `ASR_BACKEND=stub|local` — заглушка или локальный pipeline распознавания;
+- `LLM_BACKEND=stub|ollama` — заглушка или OpenAI-совместимый локальный Ollama-клиент;
+- `LLM_BASE_URL`, `LLM_MODEL` — OpenAI-совместимый адрес и модель локального Ollama;
 - `TALDAU_TIMEZONE=Asia/Almaty` — часовой пояс для относительных сроков;
-- `TALDAU_ML_RESULT_FIXTURE=examples/results/meeting_result.json` — необязательный режим проверки интеграции без весов. Удалите переменную для реального вызова `process_meeting`;
+- `TALDAU_ML_RESULT_FIXTURE=examples/results/meeting_result.json` — необязательный режим проверки интеграции без весов, имеющий приоритет над заглушками. Удалите переменную для реального вызова `process_meeting`;
 - `TALDAU_ASR_ENGINE`, `TALDAU_ASR_MODEL`, `TALDAU_DIARIZATION_MODEL`, `TALDAU_LLM_MODEL`, `TALDAU_KAZLLM_MODEL`, `TALDAU_OLLAMA_URL`, `TALDAU_DEVICE` — локальные ML-модели и runtime. Подробности: [ML_RUN.md](ML_RUN.md).
 
 Frontend (`frontend/.env`, необязательно):
@@ -142,7 +145,7 @@ PYTHONPATH=backend python3 -m unittest discover -s backend/tests -v
 4. Подтвердите уведомление участников и отправьте запись на обработку. Без согласия API вернёт ошибку 400.
 5. На странице совещания дождитесь появления ML-черновика. Проверьте исходный текст, подсказки KazLLM, границы говорящих и предупреждения.
 6. Измените имя участника и перезагрузите страницу: имя должно сохраниться в транскрипте и связанных поручениях.
-7. Исправьте или удалите дублирующиеся поручения. Укажите ответственного и срок, затем нажмите «Подтвердить»; до подтверждения напоминания заблокированы.
+7. Исправьте или удалите дублирующиеся поручения. Для результата реального ML укажите ответственного и срок, затем нажмите «Подтвердить»; до подтверждения напоминания и экспорт заблокированы.
 8. Скачайте протокол DOCX и проверьте заголовок, транскрипт, саммари и таблицу поручений.
 9. Откройте «Контроль поручений», примените фильтры, создайте напоминание и отметьте поручение выполненным.
 
