@@ -122,7 +122,7 @@ export function TasksPage() {
             <span>{task.urgency === 'high' ? 'Высокая срочность' : task.urgency === 'medium' ? 'Средняя срочность' : 'Низкая срочность'}</span>
           </div>
           <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-            <Link to={`/meetings/${task.meeting_id}?t=${task.timestamp}`} className="inline-flex min-w-0 items-center gap-1 text-xs text-[#666] hover:text-[#171717] hover:underline hover:underline-offset-4">
+            <Link to={`/app/meetings/${task.meeting_id}?t=${task.timestamp}`} className="inline-flex min-w-0 items-center gap-1 text-xs text-[#666] hover:text-[#171717] hover:underline hover:underline-offset-4">
               <span className="truncate">{task.meeting_title}</span><span className="shrink-0">· {formatTime(task.timestamp)}</span><ChevronRight className="h-3.5 w-3.5 shrink-0" />
             </Link>
             <div className="flex items-center gap-1">

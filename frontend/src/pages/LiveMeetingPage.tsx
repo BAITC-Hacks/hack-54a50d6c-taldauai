@@ -282,7 +282,7 @@ export function LiveMeetingPage() {
         consent_confirmed: true,
         num_speakers: speakerCount ? Number(speakerCount) : undefined,
       })
-      navigate(`/meetings/${meeting.id}`)
+      navigate(`/app/meetings/${meeting.id}`)
     } catch (reason) {
       const message = getErrorMessage(reason, 'Повтори отправку записи.')
       setError(message)

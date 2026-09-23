@@ -141,7 +141,7 @@ export function NewMeetingPage() {
       const source = tab === 'upload' ? 'upload' : 'recording'
       const payload = source === 'upload' ? file : recording
       const meeting = await createMeeting({ title: title.trim(), date, source, fileName: file?.name ?? 'recording.webm', file: payload ?? undefined, consent_confirmed: consent, num_speakers: numSpeakers ? Number(numSpeakers) : undefined })
-      navigate(`/meetings/${meeting.id}`)
+      navigate(`/app/meetings/${meeting.id}`)
     } catch (reason) {
       toast('Не удалось создать совещание', reason instanceof Error ? reason.message : 'Повторите попытку')
     } finally { setSubmitting(false) }

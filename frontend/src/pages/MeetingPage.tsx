@@ -141,10 +141,10 @@ export function MeetingPage() {
   }
 
   if (loading) return <div className="td-page td-page-wide space-y-5"><div className="h-8 w-64 animate-pulse rounded bg-[#eee]" /><div className="h-28 animate-pulse rounded bg-[#f5f5f5]" /><div className="h-52 animate-pulse rounded bg-[#f5f5f5]" /></div>
-  if (!meeting) return <div className="td-page td-page-wide td-empty"><FileText className="mx-auto mb-4 h-8 w-8 text-[#aaa]" strokeWidth={1.4} /><p className="font-medium">Совещание не найдено</p><Link to="/" className="mt-4 inline-flex items-center gap-1 text-sm text-[#666] hover:text-[#171717]"><ArrowLeft className="h-4 w-4" />К списку совещаний</Link></div>
+  if (!meeting) return <div className="td-page td-page-wide td-empty"><FileText className="mx-auto mb-4 h-8 w-8 text-[#aaa]" strokeWidth={1.4} /><p className="font-medium">Совещание не найдено</p><Link to="/app" className="mt-4 inline-flex items-center gap-1 text-sm text-[#666] hover:text-[#171717]"><ArrowLeft className="h-4 w-4" />К списку совещаний</Link></div>
 
   return <div className="td-page td-page-wide">
-    <Link to="/" className="mb-5 inline-flex items-center gap-1.5 text-[13px] text-[#666] hover:text-[#171717]"><ArrowLeft className="h-4 w-4" />Все совещания</Link>
+    <Link to="/app" className="mb-5 inline-flex items-center gap-1.5 text-[13px] text-[#666] hover:text-[#171717]"><ArrowLeft className="h-4 w-4" />Все совещания</Link>
     <header className="td-protocol-heading">
       <div className="min-w-0">
         <div className="mb-2 flex flex-wrap items-center gap-2"><Badge variant={reviewComplete ? 'success' : meeting.status === 'failed' || meeting.status === 'error' ? 'danger' : 'warning'}>{reviewComplete ? 'Проверено' : meetingStatusLabels[meeting.status] ?? meeting.status}</Badge><span className="text-xs text-[#777]">{formatDate(meeting.date, true)}</span></div>
