@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowRight, CalendarDays, CheckCircle2, Clock3, FileAudio, ListChecks, Plus } from 'lucide-react'
+import { ArrowRight, CalendarDays, CheckCircle2, Clock3, FileAudio, ListChecks, Mic, Upload } from 'lucide-react'
 import { getMeetings } from '@/api'
 import type { Meeting } from '@/types'
 import { formatDate } from '@/lib/utils'
@@ -16,8 +16,11 @@ export function MeetingsPage() {
 
   return <div className="space-y-7">
     <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-      <div><p className="mb-2 text-xs font-semibold uppercase tracking-[.16em] text-teal-700">Рабочее пространство</p><h1 className="page-title">Совещания</h1><p className="mt-2 text-sm text-muted-foreground">Протоколы, решения и поручения в едином контуре</p></div>
-      <Link to="/new"><Button className="w-full sm:w-auto"><Plus className="h-4 w-4" />Новое совещание</Button></Link>
+      <div><p className="mb-2 text-xs font-semibold uppercase tracking-wide text-emerald-800">Рабочее пространство</p><h1 className="page-title">Совещания</h1><p className="mt-2 text-sm text-muted-foreground">Записи, проверка протоколов и поручения команды</p></div>
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <Link to="/new"><Button variant="outline" className="w-full sm:w-auto"><Upload className="h-4 w-4" />Загрузить запись</Button></Link>
+        <Link to="/live"><Button className="w-full sm:w-auto"><Mic className="h-4 w-4" />Запустить ассистента</Button></Link>
+      </div>
     </div>
 
     <div className="grid gap-3 sm:grid-cols-3">

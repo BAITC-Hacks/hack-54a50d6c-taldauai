@@ -1,0 +1,946 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light">
+  <meta name="theme-color" content="#ffffff">
+  <meta name="description" content="TaldauAI — локальный интерактивный прототип рабочего пространства для проверки протоколов совещаний.">
+  <title>TaldauAI — рабочее пространство</title>
+  <style>/* TaldauAI • document-first monochrome UI. All colors use equal RGB channels. */
+:root{
+  --paper:#fff; --sidebar:#f8f8f8; --soft:#f7f7f7; --hover:#f0f0f0;
+  --selected:#eaeaea; --ink:#2b2b2b; --black:#202020; --muted:#737373;
+  --faint:#929292; --line:#e9e9e9; --strong-line:#d9d9d9;
+  --sidebar-w:236px; --source-w:420px; --radius:5px;
+  --font:ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --shadow:0 12px 36px #0000000d,0 3px 8px #00000008;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scrollbar-gutter:stable}
+body{margin:0;color:var(--ink);background:var(--paper);font-family:var(--font);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;border:0;background:none}
+button:disabled{cursor:not-allowed;opacity:.38}
+button,a,input,select,textarea,[tabindex]{-webkit-tap-highlight-color:transparent}
+:focus-visible{outline:2px solid #555;outline-offset:3px;border-radius:3px}
+input,textarea{accent-color:#333}
+input[type="checkbox"]{width:15px;height:15px;cursor:pointer;flex:none}
+input[type="range"]{accent-color:#333;width:100%}
+textarea{resize:vertical}
+a{color:inherit}
+button svg, .icon{width:18px;height:18px;flex-shrink:0;vertical-align:middle}
+.icon{stroke:currentColor;fill:none;stroke-width:1.65;stroke-linecap:round;stroke-linejoin:round}
+[hidden]{display:none!important}
+h1,h2,h3,p{margin:0}
+h1{font-size:38px;line-height:1.18;letter-spacing:-1.1px;font-weight:700}
+h2{font-size:19px;line-height:1.4;letter-spacing:-.3px;font-weight:650}
+h3{font-size:15px;line-height:1.4;font-weight:650}
+.muted{color:var(--muted)}
+.small{font-size:12px}
+.tabular{font-variant-numeric:tabular-nums}
+.flex{display:flex;align-items:center;gap:8px}
+.grow{flex:1;min-width:0}
+.truncate{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nowrap{white-space:nowrap}
+.skip-link{position:fixed;top:-60px;left:16px;z-index:1000;background:var(--black);color:#fff;padding:10px 18px;border-radius:5px}
+.skip-link:focus{top:12px}
+/* Sidebar */
+.sidebar{width:var(--sidebar-w);position:fixed;inset:0 auto 0 0;background:var(--sidebar);display:flex;flex-direction:column;padding:12px 9px 10px;z-index:40;border-right:1px solid #f1f1f1;transition:transform .2s}
+.workspace-name{display:flex;align-items:center;gap:9px;padding:5px 8px;margin-bottom:17px;min-height:32px}
+.wordmark{font-size:15px;font-weight:680;letter-spacing:-.4px}
+.logo-mark{width:24px;height:25px;border:1.6px solid var(--ink);border-radius:4px;background:white;display:grid;place-items:center;font-family:Georgia,serif;font-size:19px;font-weight:700;line-height:1}
+.sidebar-collapse{margin-left:auto;opacity:0;color:var(--muted)}
+.sidebar:hover .sidebar-collapse,.sidebar-collapse:focus-visible{opacity:1}
+.nav-group{margin-bottom:24px}
+.nav-item{width:100%;min-height:32px;display:flex;align-items:center;gap:9px;text-align:left;padding:5px 10px;border-radius:5px;color:#656565;font-size:13px;line-height:1.4;margin:1px 0}
+.nav-item .icon{width:17px;height:17px;stroke-width:1.65}
+.nav-item:hover{background:var(--hover)}
+.nav-item.active{background:var(--selected);color:var(--ink);font-weight:550}
+.nav-item .shortcut{margin-left:auto;font-size:10px;color:#777;border:1px solid #dedede;border-radius:3px;padding:0 4px;line-height:17px}
+.nav-section-title{font-size:11px;font-weight:550;color:#767676;padding:0 10px;margin-bottom:6px;display:flex;align-items:center;gap:6px}
+.nav-count{margin-left:auto;color:#787878;font-size:11px;font-variant-numeric:tabular-nums}
+.recent .nav-item{font-size:12px;gap:8px;padding-left:11px;min-height:31px}
+.sidebar-bottom{margin-top:auto}
+.local-note{font-size:11px;display:flex;align-items:center;gap:7px;color:#747474;padding:11px 10px 0;margin-top:9px;border-top:1px solid var(--line)}
+.local-note .icon{width:13px;height:13px}
+.profile-row{display:flex;gap:8px;align-items:center;padding:10px 9px 3px;font-size:12px}
+.profile-initials{width:23px;height:23px;display:grid;place-items:center;font-size:10px;font-weight:600;background:#e9e9e9;border-radius:4px}
+/* Frame and controls */
+.app-shell{margin-left:var(--sidebar-w);min-height:100vh;transition:margin .2s}
+.topbar{height:47px;display:flex;align-items:center;gap:10px;padding:0 21px;position:sticky;top:0;background:#fffffff5;z-index:20;font-size:12px}
+.breadcrumbs{display:flex;align-items:center;gap:9px;min-width:0;flex:1}
+.breadcrumbs .icon{width:15px;height:15px;color:#787878}
+.crumb{border-radius:4px;padding:3px 5px;white-space:nowrap;color:#606060;font-size:12px}
+.crumb:hover{background:var(--hover)}
+.crumb-current{max-width:310px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.slash{color:#b0b0b0}
+.topbar-tools{display:flex;align-items:center;gap:5px;flex-shrink:0}
+.save-status{color:#767676;font-size:11px;margin-right:9px;white-space:nowrap;display:flex;align-items:center;gap:5px}
+.save-status .icon{width:13px;height:13px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:31px;padding:5px 10px;border-radius:var(--radius);font-size:12px;font-weight:500;line-height:1.45;white-space:nowrap;transition:background .12s}
+.btn .icon{width:15px;height:15px}
+.btn:hover{background:var(--hover)}
+.btn.primary{background:var(--black);color:#fff;border:1px solid var(--black);box-shadow:0 1px 2px #00000008}
+.btn.primary:hover{background:#444;border-color:#444}
+.btn.secondary{border:1px solid var(--strong-line);background:#fff;box-shadow:0 1px 2px #00000003}
+.btn.secondary:hover{background:#f7f7f7}
+.btn.tertiary{color:var(--muted);padding-left:6px;padding-right:6px}
+.btn.small-btn{min-height:26px;padding:3px 7px;font-size:11px}
+.btn.large-btn{min-height:36px;padding:7px 13px;font-size:13px}
+.icon-btn{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:4px;color:#767676;flex-shrink:0}
+.icon-btn .icon{width:17px;height:17px}
+.icon-btn:hover{background:var(--hover);color:var(--ink)}
+.icon-btn.is-on{color:var(--ink);background:var(--hover)}
+.icon-btn.is-on .star-icon{fill:#444}
+.menu-wrap{position:relative}
+.dropdown{position:absolute;right:0;top:calc(100% + 5px);width:238px;background:#fff;border:1px solid var(--line);border-radius:7px;padding:5px;box-shadow:var(--shadow);z-index:90}
+.dropdown button{width:100%;display:flex;align-items:center;gap:9px;padding:7px 8px;text-align:left;border-radius:4px;font-size:12px}
+.dropdown button:hover{background:var(--hover)}
+.dropdown .icon{width:16px;height:16px;color:#777}
+.dropdown hr{border:0;border-top:1px solid var(--line);margin:5px 2px}
+.mobile-toggle,.desktop-open-sidebar{display:none}
+body.sidebar-hidden .sidebar{transform:translateX(-100%)}
+body.sidebar-hidden .app-shell{margin-left:0}
+body.sidebar-hidden .desktop-open-sidebar{display:inline-flex}
+/* Pages */
+.page{max-width:936px;padding:53px 46px 96px;margin:0 auto}
+.page.database-page{max-width:1270px;padding:63px 54px 100px}
+.page.form-page{max-width:860px}
+.page-icon{color:#3c3c3c;width:44px;height:47px;display:flex;align-items:center;margin-bottom:17px}
+.page-icon .icon{width:43px;height:43px;stroke-width:1.35}
+.page-title{max-width:735px;overflow-wrap:anywhere}
+.page-description{margin-top:11px;color:var(--muted);font-size:14px;line-height:1.6;max-width:650px}
+.page-context{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted);margin-bottom:12px}
+.page-context .icon{width:13px;height:13px}
+.properties{margin:23px 0 23px;display:grid;gap:2px;font-size:13px}
+.property{display:grid;grid-template-columns:153px minmax(0,1fr);min-height:29px;align-items:start}
+.property-name{color:var(--muted);display:flex;align-items:center;gap:8px;padding:4px 0}
+.property-name .icon{width:15px;height:15px;stroke-width:1.6}
+.property-value{padding:4px 7px;display:flex;align-items:center;gap:8px;min-height:29px;flex-wrap:wrap}
+.property-value.is-button{margin-left:0;justify-self:start;border-radius:4px;text-align:left;font-size:13px}
+.property-value.is-button:hover{background:var(--hover)}
+.tag{display:inline-flex;align-items:center;gap:5px;padding:1px 6px;border-radius:4px;background:#f0f0f0;font-size:11px;line-height:20px;white-space:nowrap;color:#525252;font-weight:450}
+.tag .icon{width:12px;height:12px;stroke-width:1.7}
+.tag.outline{border:1px solid #dcdcdc;background:#fff;line-height:18px}
+.lang-tag{font-size:10px;border:1px solid #e3e3e3;color:#767676;padding:0 4px;border-radius:3px;line-height:17px;letter-spacing:.15px}
+.review-callout{display:flex;align-items:center;gap:12px;background:var(--soft);border-radius:5px;padding:12px 14px;margin:22px 0 23px;font-size:12px;line-height:1.6}
+.review-callout>.icon{width:18px;height:18px;align-self:flex-start;margin-top:3px;color:#555}
+.review-callout strong{font-weight:600;color:#404040}
+.review-callout p{color:var(--muted);font-size:11px;margin-top:1px}
+.review-callout .btn{margin-left:auto}
+.review-callout .btn .icon{width:13px;height:13px}
+.doc-tabs,.db-tabs{display:flex;align-items:center;gap:19px;border-bottom:1px solid var(--line);margin-bottom:26px}
+.tab{position:relative;display:flex;align-items:center;gap:6px;padding:9px 0 10px;color:var(--muted);font-size:13px;line-height:21px;white-space:nowrap}
+.tab .icon{width:15px;height:15px}
+.tab[aria-selected="true"]{color:var(--ink);font-weight:550}
+.tab[aria-selected="true"]::after{content:"";position:absolute;bottom:-1px;left:0;right:0;height:2px;background:#373737}
+.doc-tabs .right-hint{margin-left:auto;font-size:11px;color:var(--muted)}
+.section{margin:0 0 30px;position:relative;scroll-margin-top:70px}
+.section-heading{display:flex;align-items:center;gap:9px;margin-bottom:12px}
+.section-heading .count{font-size:12px;color:var(--muted);font-weight:400}
+.section-actions{margin-left:auto;display:flex;gap:4px;align-items:center}
+.section-heading .section-actions .icon-btn{opacity:0}
+.section:hover .section-heading .section-actions .icon-btn,.section:focus-within .section-heading .section-actions .icon-btn{opacity:1}
+.doc-text{font-size:14px;line-height:1.8;white-space:pre-wrap}
+.content-block{position:relative}
+.block-grip{position:absolute;left:-26px;top:2px;opacity:0;color:#a5a5a5;pointer-events:none}
+.block-grip .icon{width:16px;height:16px}
+.content-block:hover .block-grip{opacity:1}
+.source-link{display:inline-flex;align-items:center;gap:4px;border-radius:3px;font-size:10px;line-height:18px;padding:0 5px;background:#f1f1f1;color:#686868;vertical-align:baseline;white-space:nowrap;margin-left:4px;font-variant-numeric:tabular-nums;cursor:pointer}
+.source-link:hover,.source-link:focus-visible{background:#e5e5e5;color:var(--ink)}
+.source-link .icon{width:11px;height:11px}
+.source-link.text-link{font-size:11px;background:none;padding:0;margin:0;color:#686868;gap:5px;border-bottom:1px solid #d2d2d2;border-radius:0}
+.suggestion-foot{display:flex;align-items:center;gap:6px;margin-top:10px;font-size:11px;color:#737373;min-height:25px;flex-wrap:wrap}
+.suggestion-foot>.icon{width:13px;height:13px}
+.suggestion-foot .btn{margin-left:auto}
+.verification-note{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--muted);margin-top:8px}
+.verification-note .icon{width:12px;height:12px}
+/* Action items in a document, not cards */
+.action-item{position:relative;border-top:1px solid var(--line);padding:15px 0 14px;scroll-margin-top:70px}
+.action-item:last-of-type{border-bottom:1px solid var(--line)}
+.action-item.selected{scroll-margin-top:70px}
+.action-heading{display:flex;align-items:flex-start;gap:9px}
+.item-toggle{width:19px;height:23px;display:flex;align-items:center;justify-content:center;color:#8a8a8a;border-radius:3px;flex-shrink:0}
+.item-toggle:hover{background:var(--hover)}
+.item-toggle .icon{width:13px;height:13px;transition:transform .15s}
+.item-toggle[aria-expanded="true"] .icon{transform:rotate(90deg)}
+.action-title{font-weight:550;font-size:14px;line-height:23px;flex:1;min-width:0;text-align:left;padding:0}
+.action-title:hover{text-decoration:underline;text-decoration-color:#c6c6c6;text-underline-offset:4px}
+.item-index{font-size:10px;color:#8b8b8b;line-height:23px;font-variant-numeric:tabular-nums;padding-right:2px}
+.action-meta{margin:6px 0 0 28px;display:flex;gap:13px;align-items:center;flex-wrap:wrap;font-size:11px;color:#717171}
+.action-meta .meta-piece{display:flex;gap:5px;align-items:center}
+.action-meta .icon{width:12px;height:12px}
+.review-label{font-size:10px;color:#656565;display:inline-flex;align-items:center;gap:5px}
+.review-label .icon{width:12px;height:12px}
+.action-detail{margin:15px 0 0 28px;padding-left:13px;border-left:2px solid #e8e8e8}
+.reason{display:flex;align-items:flex-start;gap:7px;color:#595959;font-size:12px;line-height:1.65}
+.reason .icon{width:14px;height:14px;margin-top:3px}
+.reason strong{font-weight:550}
+.evidence-quote{color:#737373;font-size:12px;line-height:1.7;margin:8px 0 13px}
+.evidence-quote .source-link{margin-top:3px}
+.inline-fields{display:grid;grid-template-columns:1.1fr 1fr;gap:12px;margin:14px 0}
+.field{display:grid;gap:6px;min-width:0}
+.field>label,.field-label{font-size:11px;color:#737373}
+.field input:not([type="checkbox"]),.field select,.field textarea,.text-input{width:100%;min-height:34px;padding:6px 9px;border:1px solid var(--strong-line);border-radius:4px;background:#fff;outline:none;font-size:12px}
+.field textarea{line-height:1.7;min-height:86px}
+.field input:focus,.field select:focus,.field textarea:focus,.text-input:focus{border-color:#777;box-shadow:0 0 0 1px #777}
+.field input:disabled{background:#f6f6f6;color:#777}
+.check-label{display:flex;align-items:flex-start;gap:7px;font-size:11px;color:#6b6b6b;line-height:1.5;cursor:pointer}
+.check-label input{width:13px;height:13px;margin:2px 0 0}
+.action-detail-footer{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.action-detail-footer .quiet{margin-left:auto}
+.quiet{color:#777;font-size:11px}
+.action-add{font-size:12px;color:#777;display:flex;align-items:center;gap:7px;padding:12px 0 0 3px}
+.action-add .icon{width:14px;height:14px}
+.action-add:hover{color:#333}
+.decision-row{display:flex;align-items:flex-start;gap:8px;font-size:14px;line-height:1.7;margin:8px 0}
+.decision-row .icon{width:15px;height:15px;margin-top:5px;color:#727272}
+.page-footer{padding-top:19px;margin-top:36px;border-top:1px solid var(--line);display:flex;gap:10px;align-items:center;font-size:11px;color:#737373}
+.page-footer .icon{width:13px;height:13px}
+.page-footer .footer-right{margin-left:auto}
+/* Databases */
+.database-toolbar{display:flex;gap:14px;align-items:center;border-bottom:1px solid var(--line);margin-top:33px}
+.database-toolbar .db-tabs{border:0;margin:0;gap:20px;flex:1}
+.database-controls{display:flex;align-items:center;gap:4px;padding-bottom:3px}
+.database-controls .btn .icon{width:14px;height:14px}
+.database-controls .text-search{width:144px;border:0;background:transparent;outline:none;font-size:12px;padding:3px 3px}
+.search-control{display:flex;gap:4px;align-items:center;color:#808080}
+.search-control .icon{width:15px;height:15px}
+.table-scroll{overflow-x:auto;overscroll-behavior-x:contain}
+.database-table{border-collapse:collapse;width:100%;font-size:12px;min-width:690px;table-layout:auto}
+.database-table th{font-weight:400;color:#757575;text-align:left;white-space:nowrap;font-size:11px;height:35px;padding:5px 10px;border-bottom:1px solid var(--line);border-right:1px solid var(--line)}
+.database-table th:last-child,.database-table td:last-child{border-right:0}
+.database-table th:first-child{padding-left:4px}
+.col-heading{display:flex;gap:6px;align-items:center}
+.col-heading .icon{width:13px;height:13px}
+.database-table td{border-bottom:1px solid var(--line);border-right:1px solid var(--line);padding:11px 10px;vertical-align:middle}
+.database-table td:first-child{padding-left:4px}
+.database-table tbody tr:hover{background:#fafafa}
+.database-table .row-name{display:flex;gap:7px;align-items:center;max-width:360px;color:#373737;font-weight:550;text-align:left;line-height:1.5;padding:0}
+.database-table .row-name>.icon{color:#909090;width:15px;height:15px}
+.database-table .row-name:hover span{text-decoration:underline;text-underline-offset:3px}
+.database-table .meeting-name-col{width:40%}
+.database-table .person{white-space:nowrap;color:#626262;font-size:11px}
+.database-table .date-cell{white-space:nowrap;color:#626262}
+.database-table .table-task-meta{font-size:10px;color:#767676;margin-top:3px;font-weight:400}
+.database-table .tag{font-size:10px}
+.table-add{display:flex;gap:7px;align-items:center;padding:9px 4px;color:#7d7d7d;font-size:12px;border-bottom:1px solid var(--line);width:100%;text-align:left}
+.table-add .icon{width:14px;height:14px}
+.table-add:hover{background:var(--soft)}
+.table-footer{font-size:10px;color:#787878;padding:10px 5px;text-align:right}
+.filter-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px;padding:10px 0;border-bottom:1px solid var(--line)}
+.filter-row select{border:1px solid var(--line);border-radius:4px;font-size:12px;padding:5px 9px;background:#fafafa;max-width:220px}
+.filter-row label{font-size:11px;color:var(--muted)}
+.empty-state{text-align:center;padding:66px 18px 60px;border-bottom:1px solid var(--line)}
+.empty-state>.icon{width:28px;height:28px;stroke-width:1.4;color:#848484;margin-bottom:14px}
+.empty-state h3{font-size:15px;margin-bottom:7px}
+.empty-state p{color:var(--muted);font-size:12px;max-width:370px;margin:0 auto 17px;line-height:1.7}
+.task-done .row-name>span{color:#888;text-decoration:line-through}
+.due-past{border-bottom:1px dotted #777;color:#333;font-weight:600}
+body.compact .database-table td{padding-top:7px;padding-bottom:7px}
+/* Transcript */
+.transcript-toolbar{display:flex;align-items:center;gap:10px;margin-bottom:21px}
+.transcript-search{display:flex;align-items:center;gap:8px;flex:1;border:1px solid var(--line);border-radius:5px;padding:6px 9px}
+.transcript-search .icon{width:15px;height:15px;color:#888}
+.transcript-search input{border:0;outline:0;background:transparent;min-width:0;width:100%;font-size:12px}
+.transcript-search:focus-within{border-color:#999}
+.transcript-caption{font-size:11px;color:#7a7a7a;margin-bottom:16px}
+.utterance{display:grid;grid-template-columns:46px minmax(0,1fr);gap:11px;padding:15px 0;scroll-margin-top:65px;border-radius:4px}
+.utterance.target{background:#f1f1f1;box-shadow:-9px 0 0 #f1f1f1,9px 0 0 #f1f1f1}
+.utterance .timestamp{font-size:10px;color:#797979;font-variant-numeric:tabular-nums;padding-top:3px;text-align:left;height:24px}
+.utterance .timestamp:hover{color:#222;text-decoration:underline}
+.speaker-line{display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:12px;line-height:20px}
+.speaker-line strong{font-weight:600}
+.speaker-line .icon-btn{margin-left:auto;width:23px;height:23px;opacity:0}
+.utterance:hover .speaker-line .icon-btn,.utterance:focus-within .speaker-line .icon-btn{opacity:1}
+.utterance p{font-size:14px;line-height:1.8}
+.utterance mark{background:#dedede;color:inherit;padding:0 1px;border-bottom:1px solid #999}
+.audio-block{border:1px solid var(--line);border-radius:5px;display:flex;align-items:center;gap:10px;padding:10px 12px;margin-bottom:24px;color:#696969;font-size:11px}
+.audio-block>.icon{width:21px;height:21px}
+.audio-block audio{width:100%;height:32px;filter:grayscale(1);max-width:500px}
+.audio-block .btn{margin-left:auto}
+.participant-row{display:flex;gap:13px;align-items:center;padding:14px 0;border-bottom:1px solid var(--line)}
+.participant-row>.icon{color:#818181;width:19px;height:19px}
+.participant-row strong{font-size:13px;font-weight:550}
+.participant-row p{font-size:11px;color:var(--muted);margin-top:2px}
+.participant-row .btn{margin-left:auto}
+/* Contextual source peek */
+.source-panel{position:fixed;inset:47px 0 0 auto;width:var(--source-w);background:#fff;border-left:1px solid #ddd;box-shadow:-8px 0 25px #00000005;z-index:35;display:flex;flex-direction:column;animation:slideIn .17s ease-out}
+.source-panel-header{height:49px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px;padding:0 17px;flex-shrink:0}
+.source-panel-header strong{font-weight:550;font-size:12px}
+.source-panel-header>.icon{width:16px;height:16px;color:#777}
+.source-panel-body{padding:27px 26px;overflow:auto;flex:1}
+.source-context{font-size:11px;color:#737373;margin-bottom:10px;line-height:1.65}
+.source-panel h2{font-size:19px;line-height:1.4;margin-bottom:5px}
+.source-panel .utterance{padding:16px 0;grid-template-columns:39px minmax(0,1fr);gap:7px}
+.source-panel .utterance p{font-size:13px}
+.source-panel .utterance.target{margin-top:16px;margin-bottom:16px;background:#f6f6f6;box-shadow:-12px 0 0 #f6f6f6,12px 0 0 #f6f6f6}
+.source-panel .speaker-line{font-size:11px;flex-wrap:wrap}
+.source-panel-footer{border-top:1px solid var(--line);padding:13px 17px;color:var(--muted);font-size:11px}
+.source-panel-footer .btn{width:100%}
+body.source-open .app-shell{margin-right:var(--source-w)}
+body.source-open .page{padding-left:40px;padding-right:40px}
+body.source-open .topbar .save-status,body.source-open .topbar .crumb-current{display:none}
+body.source-open h1{font-size:32px}
+.citation-preview{position:fixed;z-index:85;max-width:322px;padding:15px 17px;border:1px solid #e2e2e2;border-radius:6px;background:#fff;box-shadow:var(--shadow);pointer-events:none}
+.citation-preview .preview-label{font-size:10px;color:#777;margin-bottom:7px;display:flex;gap:6px;align-items:center}
+.citation-preview .preview-label .icon{width:12px;height:12px}
+.citation-preview p{font-size:12px;line-height:1.7}
+.citation-preview .preview-footer{font-size:10px;color:#777;margin-top:9px;border-top:1px solid var(--line);padding-top:8px}
+/* New meeting and process states */
+.form-title-input{border:0;outline:0;width:100%;font-size:36px;font-weight:700;letter-spacing:-.8px;line-height:1.3;background:transparent;padding:0;margin-bottom:14px}
+.form-title-input::placeholder{color:#b0b0b0}
+.form-title-input:focus{box-shadow:none}
+.new-form .form-meta{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin:16px 0 30px}
+.new-form .doc-tabs{margin-top:22px;margin-bottom:18px}
+.dropzone{border:1px dashed #cecece;border-radius:6px;padding:36px 20px;text-align:center;background:#fdfdfd}
+.dropzone.dragging{background:#efefef;border-color:#777}
+.dropzone>.icon{width:31px;height:31px;color:#666;stroke-width:1.35;margin-bottom:14px}
+.dropzone h3{font-size:14px;font-weight:550;margin-bottom:5px}
+.dropzone p{font-size:11px;color:var(--muted);margin-bottom:16px}
+.selected-file{display:flex;align-items:center;gap:13px;padding:16px;border:1px solid var(--line);border-radius:5px;background:#fafafa}
+.selected-file>.icon{width:24px;height:24px;stroke-width:1.4;color:#6e6e6e}
+.selected-file strong{font-size:12px;display:block;word-break:break-all}
+.selected-file p{font-size:11px;color:#757575;margin-top:3px}
+.file-error{font-size:12px;line-height:1.7;margin-top:10px;border-left:2px solid #777;padding:8px 12px;background:#f6f6f6}
+.form-help{font-size:11px;line-height:1.8;color:var(--muted);margin:13px 0 24px;display:flex;gap:7px;align-items:flex-start}
+.form-help .icon{width:13px;height:13px;flex-shrink:0;margin-top:3px}
+.form-section{margin:27px 0}
+.form-section h3{margin-bottom:8px;font-size:14px}
+.form-buttons{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-top:27px;padding-top:19px;border-top:1px solid var(--line)}
+.consent-row{padding:10px 0;font-size:12px;color:#5e5e5e;line-height:1.7}
+.recorder{border:1px solid var(--line);border-radius:5px;padding:28px;display:flex;align-items:center;flex-direction:column;gap:10px;background:#fbfbfb}
+.record-button{width:56px;height:56px;border-radius:50%;background:#222;color:#fff;display:grid;place-items:center;margin:4px 0 5px}
+.record-button .icon{width:23px;height:23px;stroke-width:1.4}
+.record-button.recording{animation:recordPulse 1.4s ease-in-out infinite}
+.record-time{font-variant-numeric:tabular-nums;font-size:24px;font-weight:500;letter-spacing:1px}
+.process-section{margin-top:29px;border-top:1px solid var(--line);padding-top:24px}
+.process-steps{display:grid;gap:19px;margin:25px 0}
+.process-step{display:flex;align-items:center;gap:11px;color:#737373;font-size:13px}
+.process-step .icon{width:17px;height:17px}
+.process-step.done{color:#333}
+.process-step.active{color:#222;font-weight:550}
+.spinner{animation:spin 1.2s linear infinite}
+.process-note{font-size:12px;color:#737373;line-height:1.8;max-width:530px}
+/* Modal */
+.modal{width:min(530px,calc(100vw - 36px));max-height:min(88dvh,760px);overflow:auto;padding:0;border:1px solid #e4e4e4;border-radius:9px;box-shadow:0 22px 80px #00000024;color:var(--ink)}
+.modal::backdrop{background:#00000030}
+.modal-header{display:flex;align-items:center;gap:12px;padding:20px 22px 15px}
+.modal-header h2{font-size:18px;flex:1}
+.modal-body{padding:0 22px 22px}
+.modal-description{font-size:12px;color:#727272;line-height:1.8;margin-bottom:20px}
+.modal-footer{padding:13px 22px;display:flex;justify-content:flex-end;gap:8px;border-top:1px solid var(--line);background:#fcfcfc}
+.modal .field{margin-bottom:14px}
+.modal .inline-fields{margin-top:0}
+.export-choice{padding:13px 0;border-top:1px solid var(--line)}
+.export-choice strong{font-size:13px;font-weight:550}
+.export-choice p{font-size:11px;color:#777;margin:4px 0 12px;line-height:1.7}
+.export-choice .btn{width:100%}
+.history-row{border-left:1px solid #ddd;padding:0 0 20px 15px;margin-left:4px;position:relative}
+.history-row:before{content:"";position:absolute;width:5px;height:5px;background:#989898;top:7px;left:-3px;border-radius:50%}
+.history-row time{color:#777;font-size:10px}
+.history-row p{font-size:12px;margin:4px 0;line-height:1.7}
+.setting-row{display:flex;align-items:center;gap:15px;padding:13px 0;border-top:1px solid var(--line)}
+.setting-row label{flex:1;font-size:12px}
+.setting-row small{font-size:11px;color:#777;display:block;margin-top:3px}
+.toggle{appearance:none!important;-webkit-appearance:none!important;width:29px!important;height:17px!important;background:#d6d6d6;border-radius:12px;position:relative;transition:.15s}
+.toggle:checked{background:#353535}
+.toggle:before{content:"";position:absolute;left:2px;top:2px;width:13px;height:13px;border-radius:50%;background:#fff;transition:.15s}
+.toggle:checked:before{transform:translateX(12px)}
+.search-modal{width:min(580px,calc(100vw - 28px))}
+.search-modal .modal-header{padding:15px 16px;border-bottom:1px solid var(--line);gap:9px}
+.command-input{width:100%;border:0;outline:0;font-size:15px;background:transparent}
+.search-results{padding:6px}
+.command-result{display:flex;gap:11px;align-items:center;width:100%;text-align:left;padding:10px 12px;border-radius:5px}
+.command-result:hover,.command-result:focus-visible{background:#f3f3f3}
+.command-result .icon{width:17px;height:17px;color:#777}
+.command-result strong{font-size:12px;font-weight:500}
+.command-result p{font-size:10px;color:#777;margin-top:2px}
+.search-hint{font-size:10px;color:#777;padding:9px 17px;border-top:1px solid var(--line);display:flex;gap:10px}
+.command-label{font-size:10px;color:#777;padding:10px 17px 2px}
+.toast{position:fixed;bottom:24px;left:calc(50% + 100px);transform:translateX(-50%);display:flex;align-items:center;gap:9px;background:#252525;color:#fff;padding:11px 15px;border-radius:6px;box-shadow:var(--shadow);font-size:12px;z-index:130;max-width:min(500px,90vw)}
+.toast .icon{width:15px;height:15px;flex-shrink:0}
+.demo-notice{font-size:11px;line-height:1.8;color:#777;background:#f7f7f7;padding:12px;border-radius:5px;margin-bottom:17px}
+body.wide .page:not(.form-page){max-width:1400px}
+@keyframes slideIn{from{transform:translateX(15px);opacity:.5}to{transform:translateX(0);opacity:1}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes recordPulse{50%{box-shadow:0 0 0 6px #dedede}}
+@media(min-width:1550px){.page{padding-top:65px}}
+@media(max-width:1230px){
+  :root{--sidebar-w:214px;--source-w:370px}
+  .page{padding-left:38px;padding-right:38px}
+  .page.database-page{padding-left:36px;padding-right:36px}
+  .save-status{display:none}
+  .database-controls .text-search{width:95px}
+  body.source-open .page{padding-left:27px;padding-right:27px}
+  body.source-open .property{grid-template-columns:119px 1fr}
+  body.source-open .doc-tabs{gap:13px}
+  body.source-open .review-callout{flex-wrap:wrap;gap:7px}
+}
+@media(max-width:1000px){
+  body.source-open .app-shell{margin-right:0}
+  .source-panel{box-shadow:-15px 0 45px #00000012;width:410px}
+  .database-toolbar{flex-wrap:wrap;gap:8px}
+  .database-toolbar .db-tabs{flex-basis:100%}
+  .database-controls{width:100%;padding-bottom:9px}
+  .database-controls .search-control{flex:1}
+  .database-controls .text-search{width:100%}
+  .crumb-current{max-width:190px}
+  .page{padding-top:43px}
+  h1{font-size:34px}
+}
+@media(max-width:760px){
+  html{scrollbar-gutter:auto}
+  :root{--sidebar-w:252px}
+  .sidebar{transform:translateX(-100%);z-index:110;box-shadow:10px 0 45px #00000010}
+  body.nav-open .sidebar{transform:translateX(0)}
+  body.nav-open{overflow:hidden}
+  .sidebar-scrim{position:fixed;inset:0;background:#00000035;z-index:100}
+  .sidebar-collapse{opacity:1}
+  .app-shell{margin-left:0!important}
+  .desktop-open-sidebar{display:none!important}
+  .mobile-toggle{display:inline-flex}
+  .topbar{height:48px;padding:0 11px;gap:6px}
+  .breadcrumbs{gap:5px}
+  .crumb-current{max-width:180px;font-size:11px}
+  .topbar-tools{gap:1px}
+  .save-status{display:none}
+  .topbar-tools>.star-button{display:none}
+  .topbar-tools .btn{padding:5px 7px;font-size:11px}
+  .topbar-tools .btn .icon{width:13px;height:13px}
+  .page,.page.database-page{padding:32px 24px 65px;max-width:700px}
+  .page-icon{margin-bottom:15px}
+  .page-icon .icon{width:36px;height:36px}
+  .page-icon{height:38px}
+  h1{font-size:32px;letter-spacing:-.7px;line-height:1.22}
+  h2{font-size:18px}
+  .property{grid-template-columns:129px minmax(0,1fr);font-size:12px}
+  .properties{margin-top:22px;margin-bottom:20px}
+  .property-value.is-button{font-size:12px}
+  .review-callout{padding:11px 12px;flex-wrap:wrap;margin:20px 0;font-size:12px;gap:8px}
+  .review-callout>.grow{flex-basis:calc(100% - 32px)}
+  .review-callout>.btn{margin-left:26px;min-height:24px;padding:3px 0}
+  .doc-tabs{gap:18px;margin-bottom:24px}
+  .doc-tabs .right-hint{display:none}
+  .tab{font-size:12px}
+  .doc-text{font-size:14px;line-height:1.85}
+  .action-meta{column-gap:10px;row-gap:7px}
+  .action-title{font-size:14px}
+  .action-detail{padding-left:11px;margin-left:22px}
+  .item-index{display:none}
+  .inline-fields{gap:10px}
+  .block-grip{display:none}
+  .section-heading .section-actions .icon-btn,.speaker-line .icon-btn{opacity:1!important}
+  .page-footer{align-items:flex-start;flex-wrap:wrap}
+  .page-footer .footer-right{margin-left:0;width:100%;padding-left:22px}
+  .source-panel{width:100%;inset:0;z-index:90;box-shadow:none;max-height:100dvh}
+  .source-panel-header{height:51px;padding:0 17px}
+  .source-panel-body{padding:25px 30px}
+  .source-panel-footer{padding-bottom:max(13px,env(safe-area-inset-bottom))}
+  body.source-open{overflow:hidden}
+  body.source-open .page{padding-left:24px;padding-right:24px}
+  .source-panel .utterance p{font-size:15px}
+  .source-panel .speaker-line{font-size:12px}
+  .citation-preview{display:none!important}
+  .toast{left:50%;bottom:20px;width:max-content;max-width:calc(100vw - 28px);font-size:11px}
+  .database-toolbar{margin-top:26px}
+  .database-toolbar .db-tabs{gap:17px;overflow-x:auto}
+  .database-controls .btn{font-size:11px}
+  .table-scroll{margin-right:-24px;padding-right:24px}
+  .database-table{min-width:730px}
+  .form-title-input{font-size:31px}
+  .new-form .form-meta{gap:13px}
+  .form-title-input{margin-top:5px}
+  .modal{max-height:87dvh}
+  .modal-header{padding:18px 18px 13px}
+  .modal-body{padding:0 18px 18px}
+  .modal-footer{padding:12px 18px}
+  .audio-block{flex-wrap:wrap}
+  .audio-block .btn{margin-left:30px}
+}
+@media(max-width:420px){
+  .page,.page.database-page{padding-left:20px;padding-right:20px}
+  .crumb-current{max-width:140px}
+  .crumb-parent-label{display:none}
+  .breadcrumbs .slash{display:none}
+  .topbar-tools .export-label{display:none}
+  .topbar-tools .btn .icon{width:16px;height:16px}
+  .properties .property{grid-template-columns:120px 1fr}
+  .inline-fields{grid-template-columns:1fr}
+  .property-value{padding-left:1px}
+  .section-heading{gap:6px}
+  .action-detail-footer .quiet{width:100%;margin-left:0;margin-top:4px}
+  .database-toolbar .db-tabs{gap:15px}
+  .db-tabs .tab .icon{display:none}
+  .db-tabs .tab{font-size:11px}
+  .new-form .form-meta{grid-template-columns:1fr}
+  .transcript-toolbar{flex-wrap:wrap}
+}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+@media print{
+  .sidebar,.topbar,.source-panel,.review-callout,.doc-tabs,.section-actions,.action-detail-footer,.action-add,.page-footer,.toast{display:none!important}
+  .app-shell{margin:0!important}
+  .page{max-width:none;padding:0}
+  body{font-size:12px}
+  .section{break-inside:avoid}
+  .source-link{color:#333;background:#f3f3f3}
+}
+</style>
+</head>
+<body>
+  <a class="skip-link" href="#main">К содержимому</a>
+  <button class="sidebar-scrim" id="sidebarScrim" aria-label="Закрыть навигацию" hidden></button>
+  <aside class="sidebar" id="sidebar" aria-label="Навигация рабочего пространства"></aside>
+  <div class="app-shell" id="appShell">
+    <header class="topbar" id="topbar"></header>
+    <main id="main" tabindex="-1"></main>
+  </div>
+  <aside id="sourcePanel" class="source-panel" aria-label="Источник в стенограмме" hidden></aside>
+  <div id="citationPreview" class="citation-preview" role="tooltip" hidden></div>
+  <dialog id="modal" class="modal" aria-labelledby="modalTitle"></dialog>
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  <input id="attachmentInput" type="file" accept="audio/*,.m4a,.mp3,.wav,.ogg,.webm" hidden>
+  <noscript><p class="no-script">Для интерактивного прототипа включите JavaScript в браузере.</p></noscript>
+  <script>'use strict';
+/* Standalone local prototype. No requests, model calls, analytics, or external assets. */
+const ICONS = {
+  search:'<circle cx="10.7" cy="10.7" r="6.7"/><path d="m16 16 4.5 4.5"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>',
+  file:'<path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z"/><path d="M14 3v5h5M8.5 12h7M8.5 16h5"/>',
+  notebook:'<rect x="5" y="3" width="15" height="18" rx="1.5"/><path d="M9 3v18M3 7h4M3 12h4M3 17h4M12 8h5M12 12h5"/>',
+  calendar:'<rect x="3.5" y="5" width="17" height="16" rx="2"/><path d="M7.5 3v4M16.5 3v4M3.5 10h17M8 14h2M14 14h2M8 17h2"/>',
+  checkSquare:'<rect x="3.5" y="3.5" width="17" height="17" rx="2"/><path d="m7.5 12 3 3 6-6"/>',
+  grid:'<rect x="3" y="4" width="18" height="16" rx="1.5"/><path d="M3 9h18M3 14.5h18M10 9v11"/>',
+  list:'<path d="M8 6h12M8 12h12M8 18h12"/><path d="M3.5 6h.1M3.5 12h.1M3.5 18h.1" stroke-width="2.7"/>',
+  clock:'<circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3.5 2"/>',
+  user:'<circle cx="12" cy="8" r="3.5"/><path d="M5 20v-1.5A5.5 5.5 0 0 1 10.5 13h3a5.5 5.5 0 0 1 5.5 5.5V20"/>',
+  users:'<path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 15a4 4 0 0 1 3 4v1"/><circle cx="9" cy="8" r="3.5"/><path d="M2 20v-1a5 5 0 0 1 5-5h4a5 5 0 0 1 5 5v1"/>',
+  languages:'<path d="M3 5h11M8 3v2M12 5c-1 5-4 8-9 10M4 8c1 3 4 6 7 7M13 21l4-11 4 11M14.5 17h5"/>',
+  check:'<path d="m5 12 4.5 4.5L19 7"/>',
+  circleCheck:'<circle cx="12" cy="12" r="8.5"/><path d="m8 12 2.8 2.8L16 9.5"/>',
+  circle:'<circle cx="12" cy="12" r="8"/>',
+  circleDashed:'<circle cx="12" cy="12" r="8.3" stroke-dasharray="2.5 3"/>',
+  alert:'<path d="M12 8v5M12 16h.01"/><circle cx="12" cy="12" r="9"/>',
+  arrowRight:'<path d="M4 12h16m-6-6 6 6-6 6"/>',
+  arrowLeft:'<path d="M20 12H4m6-6-6 6 6 6"/>',
+  arrowUpRight:'<path d="M6 18 18 6M6 6h12v12"/>',
+  chevronRight:'<path d="m9 5 7 7-7 7"/>',
+  chevronDown:'<path d="m6 9 6 6 6-6"/>',
+  doubleLeft:'<path d="m11 6-6 6 6 6m7-12-6 6 6 6"/>',
+  panel:'<rect x="3" y="4" width="18" height="16" rx="1.5"/><path d="M9 4v16"/>',
+  more:'<circle cx="5" cy="12" r="1" fill="currentColor"/><circle cx="12" cy="12" r="1" fill="currentColor"/><circle cx="19" cy="12" r="1" fill="currentColor"/>',
+  close:'<path d="m6 6 12 12M6 18 18 6"/>',
+  download:'<path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5"/>',
+  upload:'<path d="M12 16V3m-5 5 5-5 5 5M4 16v5h16v-5"/>',
+  star:'<path d="m12 3 2.8 5.7 6.3.9-4.5 4.4 1 6.2-5.6-3-5.6 3 1-6.2L3 9.6l6.2-.9z"/>',
+  sparkles:'<path d="m10 3 2 6 6 2-6 2-2 6-2-6-6-2 6-2zM19 3v4M17 5h4M19 17v4M17 19h4"/>',
+  settings:'<path d="m9 3-.5 2-2 1.2-2-.5L2 10l1.5 1.5v2L2 15l2.5 4.3 2-.5 2 1.2.5 2h5l.5-2 2-1.2 2 .5L21 15l-1.5-1.5v-2L21 10l-2.5-4.3-2 .5-2-1.2L14 3z"/><circle cx="11.5" cy="12.5" r="3"/>',
+  help:'<circle cx="12" cy="12" r="9"/><path d="M9.2 9a2.8 2.8 0 1 1 4.1 2.5c-1.1.6-1.3 1.1-1.3 2M12 17h.01"/>',
+  lock:'<rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"/>',
+  edit:'<path d="m15 4 5 5M4 20l5-1L20 8a2.2 2.2 0 0 0 0-3l-1-1a2.2 2.2 0 0 0-3 0L5 15z"/>',
+  quote:'<path d="M10 6H4v6h5c0 3-1 5-4 6M20 6h-6v6h5c0 3-1 5-4 6"/>',
+  link:'<path d="m10 13 4-4M8 15l-2 2a3.5 3.5 0 0 1-5-5l4-4a3.5 3.5 0 0 1 5 0m4 1 2-2a3.5 3.5 0 0 1 5 5l-4 4a3.5 3.5 0 0 1-5 0" transform="translate(1 -1)"/>',
+  grip:'<path d="M9 5h.01M15 5h.01M9 12h.01M15 12h.01M9 19h.01M15 19h.01" stroke-width="2.4"/>',
+  filter:'<path d="M4 5h16M7 12h10M10 19h4"/>',
+  sort:'<path d="M8 4v16m-4-4 4 4 4-4M16 20V4m-4 4 4-4 4 4"/>',
+  sliders:'<path d="M4 6h4m4 0h8M4 12h9m4 0h3M4 18h2m4 0h10"/><circle cx="10" cy="6" r="2"/><circle cx="15" cy="12" r="2"/><circle cx="8" cy="18" r="2"/>',
+  mic:'<rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3M8 22h8"/>',
+  stop:'<rect x="6" y="6" width="12" height="12" rx="1" fill="currentColor"/>',
+  play:'<path d="m8 4 12 8-12 8z"/>',
+  wave:'<path d="M3 10v4M7 6v12M11 3v18M15 7v10M19 5v14M23 10v4"/>',
+  rotate:'<path d="M3 11a9 9 0 1 1 2.8 7M3 4v7h7"/>',
+  mail:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 6 9 7 9-7"/>',
+  history:'<path d="M3 10a9 9 0 1 1 2 8M3 4v6h6M12 7v5l3 2"/>',
+  trash:'<path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7"/>',
+  copy:'<rect x="8" y="8" width="12" height="13" rx="1.5"/><path d="M15 8V3H3v13h5"/>',
+  text:'<path d="M4 5h16M4 10h16M4 15h16M4 20h10"/>',
+  inbox:'<path d="M3 12 6 4h12l3 8v8H3zM3 12h5l2 3h4l2-3h5"/>',
+  number:'<path d="m10 3-4 18M18 3l-4 18M4 9h17M3 15h17"/>',
+  heading:'<path d="m3 18 5-12 5 12M5 14h6M17 12h4v6h-4a2 2 0 0 1 0-4h4"/>',
+  loader:'<path d="M20 12a8 8 0 1 1-8-8"/>',
+  bell:'<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M9 21h6"/>'
+};
+const icon=(name,cls='')=>`<svg class="icon ${cls}" viewBox="0 0 24 24" aria-hidden="true" focusable="false">${ICONS[name]||ICONS.file}</svg>`;
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const clone=x=>JSON.parse(JSON.stringify(x));
+const $=(s,r=document)=>r.querySelector(s);
+const $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const STORE='taldauai-notion-local-v3';
+const DEMO_TODAY='2026-09-23';
+const ME='Алия Касымова';
+const uid=prefix=>prefix+'-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,6);
+const fmtDate=(s,long=false)=>s?new Intl.DateTimeFormat('ru-RU',{day:'numeric',month:long?'long':'short',...(long?{year:'numeric'}:{})}).format(new Date(s+'T12:00:00')):'Без срока';
+const timeLabel=seconds=>`${Math.floor(seconds/60).toString().padStart(2,'0')}:${Math.floor(seconds%60).toString().padStart(2,'0')}`;
+const basePeople=[{name:'Айдар Садыков',role:'Руководитель финансового отдела'},{name:ME,role:'Секретарь совещания'},{name:'Марат Нурпеисов',role:'Руководитель проектного офиса'},{name:'Дана Омарова',role:'Председатель совещания'}];
+const seed={version:3,favorites:['m1'],settings:{compact:false,wide:false},history:[{time:'2026-09-23T11:04:00',meeting:'m1',text:'Алия Касымова подтвердила поручение «Подготовить проект письма».'},{time:'2026-09-23T10:47:00',meeting:'m1',text:'Создан демонстрационный черновик. Эти данные не получены из вашего аудио.'}],meetings:[
+  {id:'m1',title:'Еженедельное совещание руководства',date:DEMO_TODAY,start:'10:00',duration:'46:18',languages:'Русский, қазақша',rawStatus:'ready',demo:true,people:clone(basePeople),summary:{text:'Обсудили сверку сводного бюджета, актуализацию списка подрядчиков и подготовку официального письма. Договорились направить бюджет в секретариат после проверки данных и согласовать ответственных по подрядчикам.',verified:false,source:['s1','s4']},decisions:[{id:'d1',text:'Направить сводный бюджет в секретариат после сверки данных всех подразделений.',verified:false,source:['s2']}],tasks:[
+    {id:'t1',title:'Обновить сводный бюджет',owner:'Айдар Садыков',due:'2026-09-30',noDue:false,verified:false,done:false,origin:'ai',reason:'Срок вычислен из фразы «до конца месяца». Проверьте точную дату.',source:['s1','s2']},
+    {id:'t2',title:'Согласовать список подрядчиков',owner:ME,due:'',noDue:false,verified:false,done:false,origin:'ai',reason:'В записи сказано «к следующей неделе». Точный день не назван.',source:['s4']},
+    {id:'t3',title:'Подготовить проект письма',owner:'Марат Нурпеисов',due:DEMO_TODAY,noDue:false,verified:true,done:false,origin:'ai',reviewer:ME,reason:'',source:['s6']}
+  ],transcript:[
+    {id:'s0',at:53,speaker:'Дана Омарова',lang:'ru',text:'Коллеги, начнём с бюджета. Важно, чтобы в итоговой версии были актуальные данные от всех подразделений.'},
+    {id:'s1',at:728,speaker:'Айдар Садыков',lang:'ru',text:'Нужно завершить сверку бюджета до конца месяца и отправить финальную версию в секретариат.'},
+    {id:'s2',at:742,speaker:'Дана Омарова',lang:'ru',text:'Айдар, тогда это за вами. Сначала сверяем данные всех подразделений, потом направляем сводный бюджет в секретариат.'},
+    {id:'s3',at:1024,speaker:ME,lang:'kk',text:'Барлық бөлімдерден соңғы деректерді жинап алу керек. Жаңартылған нұсқасын содан кейін жібереміз.'},
+    {id:'s4',at:1390,speaker:'Дана Омарова',lang:'kk',text:'Алия, келесі аптаға дейін мердігерлердің тізімін жаңартып, жауапты тұлғалармен келісіп шығыңыз.'},
+    {id:'s5',at:1418,speaker:ME,lang:'kk',text:'Жақсы, тізімді жаңартамын. Нақты мерзімін бөлімдермен бөлек келісіп аламын.'},
+    {id:'s6',at:2045,speaker:'Марат Нурпеисов',lang:'ru',text:'Проект письма подготовлю сегодня. До конца рабочего дня направлю вам на согласование.'},
+    {id:'s7',at:2656,speaker:'Дана Омарова',lang:'ru',text:'Спасибо, коллеги. Фиксируем решения в протоколе. Перед рассылкой ещё раз проверим исполнителей и сроки.'}
+  ]},
+  {id:'m2',title:'Планирование бюджета на 2027 год',date:'2026-09-22',start:'15:30',duration:'38:42',languages:'Русский',rawStatus:'ready',demo:true,people:clone(basePeople.slice(0,3)),summary:{text:'Согласовали структуру проекта бюджета на следующий год и перечень данных для финансового плана.',verified:true,source:['b1']},decisions:[],tasks:[{id:'b-t1',title:'Собрать предложения подразделений',owner:'Айдар Садыков',due:'2026-09-25',noDue:false,verified:true,done:false,origin:'ai',source:['b1']},{id:'b-t2',title:'Разослать шаблон финансового плана',owner:ME,due:'2026-09-22',noDue:false,verified:true,done:true,origin:'ai',source:['b2']}],transcript:[{id:'b1',at:380,speaker:'Айдар Садыков',lang:'ru',text:'Предложения подразделений соберу до 25 сентября. На их основе сформируем проект бюджета.'},{id:'b2',at:732,speaker:ME,lang:'ru',text:'Сегодня разошлю всем шаблон финансового плана.'}]},
+  {id:'m3',title:'Рабочая группа по закупкам',date:'2026-09-21',start:'11:00',duration:'31:06',languages:'Қазақша',rawStatus:'ready',demo:true,people:clone(basePeople.slice(1)),summary:{text:'Обсудили актуализацию графика закупок и подготовку списка документов для следующего заседания.',verified:false,source:['p1']},decisions:[],tasks:[{id:'p-t1',title:'Обновить график закупок',owner:'Марат Нурпеисов',due:'2026-09-25',noDue:false,verified:false,done:false,origin:'ai',reason:'Проверьте исполнителя и точную дату по исходной реплике.',source:['p1']}],transcript:[{id:'p1',at:406,speaker:'Марат Нурпеисов',lang:'kk',text:'Сатып алу кестесін 25 қыркүйекке дейін жаңартып жіберемін.'}]},
+  {id:'m4',title:'Статус цифровизации',date:'2026-09-20',start:'09:30',duration:'52:11',languages:'Русский, қазақша',rawStatus:'processing',demo:true,people:clone(basePeople),summary:{text:'',verified:false,source:[]},decisions:[],tasks:[],transcript:[]},
+  {id:'m5',title:'Обсуждение инфраструктурных проектов',date:'2026-09-18',start:'14:00',duration:'—',languages:'Русский',rawStatus:'error',demo:true,people:clone(basePeople),summary:{text:'',verified:false,source:[]},decisions:[],tasks:[],transcript:[]},
+  {id:'m6',title:'Операционные вопросы',date:'2026-09-17',start:'10:00',duration:'24:50',languages:'Русский',rawStatus:'ready',demo:true,people:clone(basePeople.slice(0,3)),summary:{text:'Обсудили сбор отчётности и согласование плана на следующую неделю.',verified:true,source:['o1']},decisions:[],tasks:[{id:'o-t1',title:'Предоставить отчёт по проектам',owner:'Марат Нурпеисов',due:'2026-09-22',noDue:false,verified:true,done:false,origin:'ai',source:['o1']}],transcript:[{id:'o1',at:328,speaker:'Марат Нурпеисов',lang:'ru',text:'Отчёт по проектам подготовлю и предоставлю до 22 сентября.'}]}
+]};
+let storageAvailable=true;
+let state=(()=>{try{const data=JSON.parse(localStorage.getItem(STORE));return data?.version===3&&Array.isArray(data.meetings)?data:clone(seed)}catch(e){storageAvailable=false;return clone(seed)}})();
+let route={view:'meeting',id:'m1'};
+let activeDocTab='protocol';
+let expandedTasks=new Set(['t1']);
+let meetingFilter='all',meetingQuery='',sortAsc=false;
+let taskFilter='active',taskQuery='',taskOwner='',taskMeeting='';
+let filterPanel=false;
+let sourceState=null,sourceReturn=null;
+let formMode='upload',selectedFile=null;
+let mediaRecorder=null,mediaStream=null,recordChunks=[],recordStart=0,recordTimer=null;
+const audioFiles=new Map();
+let processTimer=null,processStage=2,processFinished=false;
+const processLabels=['Файл выбран','Подготовка аудио','Распознавание речи','Определение говорящих','Формирование черновика'];
+let toastTimer;
+
+function meeting(id=route.id){return state.meetings.find(m=>m.id===id)}
+function visibleTasks(m){return (m.tasks||[]).filter(t=>!t.rejected)}
+function pendingCount(m){if(m.rawStatus!=='ready')return 0;return Number(!m.summary.verified)+m.decisions.filter(d=>!d.verified).length+visibleTasks(m).filter(t=>!t.verified).length}
+function allTasks(){return state.meetings.flatMap(m=>visibleTasks(m).map(t=>({...t,meetingId:m.id,meetingTitle:m.title})))}
+function log(m,text){state.history.unshift({time:new Date().toISOString(),meeting:m.id,text})}
+function save(){try{localStorage.setItem(STORE,JSON.stringify(state));storageAvailable=true}catch(e){storageAvailable=false;toast('Браузер не разрешил сохранение. Правки останутся только в этой вкладке.','alert')}applySettings()}
+function applySettings(){document.body.classList.toggle('compact',!!state.settings.compact);document.body.classList.toggle('wide',!!state.settings.wide)}
+function toast(message,ico='check'){clearTimeout(toastTimer);$('#toast').innerHTML=icon(ico)+`<span>${esc(message)}</span>`;$('#toast').hidden=false;toastTimer=setTimeout(()=>$('#toast').hidden=true,3500)}
+function statusInfo(m){if(m.rawStatus==='error')return{icon:'alert',label:'Ошибка файла'};if(m.rawStatus==='processing')return{icon:'loader',label:'Обработка · демо'};if(m.rawStatus==='uploaded')return{icon:'upload',label:'Файл выбран'};return pendingCount(m)?{icon:'circleDashed',label:'На проверке'}:{icon:'circleCheck',label:'Проверено'}}
+function badge(m){const s=statusInfo(m);return `<span class="tag${s.icon==='circleDashed'?' outline':''}">${icon(s.icon)}${s.label}</span>`}
+function btn(label,action,ico='',cls='',attrs=''){return `<button type="button" class="btn ${cls}" data-action="${action}" ${attrs}>${ico?icon(ico):''}${label}</button>`}
+function iconBtn(label,action,ico,attrs='',cls=''){return `<button type="button" class="icon-btn ${cls}" title="${esc(label)}" aria-label="${esc(label)}" data-action="${action}" ${attrs}>${icon(ico,ico==='star'?'star-icon':'')}</button>`}
+function nav(path){if(mediaRecorder?.state==='recording'){toast('Сначала остановите запись.','alert');return}closeSource();closeSidebar();if(location.hash.slice(1)===path){parseRoute();render()}else location.hash=path}
+function parseRoute(){const [view,id]=(location.hash.slice(1)||'meeting/m1').split('/');route={view:['meeting','meetings','new','tasks'].includes(view)?view:'meetings',id:id||'m1'};if(route.view==='meeting'&&!meeting())route.view='meetings'}
+function closeSidebar(){document.body.classList.remove('nav-open');$('#sidebarScrim').hidden=true}
+function toggleSidebar(){if(innerWidth<=760){const on=document.body.classList.toggle('nav-open');$('#sidebarScrim').hidden=!on}else document.body.classList.toggle('sidebar-hidden')}
+function renderSidebar(){
+  const activeCount=allTasks().filter(t=>t.verified&&!t.done).length;
+  const navItem=(label,ico,path,active=false,tail='',cls='')=>`<button class="nav-item ${active?'active':''} ${cls}" data-action="nav" data-path="${path}" ${active?'aria-current="page"':''}>${icon(ico)}<span class="truncate">${esc(label)}</span>${tail}</button>`;
+  const favorites=state.meetings.filter(m=>state.favorites.includes(m.id));
+  $('#sidebar').innerHTML=`
+    <div class="workspace-name"><span class="logo-mark" aria-hidden="true">T</span><span class="wordmark">TaldauAI</span>${iconBtn('Свернуть навигацию','toggle-sidebar','doubleLeft','','sidebar-collapse')}</div>
+    <div class="nav-group" style="margin-bottom:23px">
+      <button class="nav-item" data-action="search">${icon('search')}<span>Поиск</span><span class="shortcut">Ctrl K</span></button>
+      ${navItem('Новое совещание','plus','new',route.view==='new')}
+    </div>
+    <div class="nav-group"><div class="nav-section-title">Рабочее пространство</div>
+      ${navItem('Совещания','calendar','meetings',route.view==='meetings')}
+      ${navItem('Поручения','checkSquare','tasks',route.view==='tasks',`<span class="nav-count">${activeCount||''}</span>`)}
+    </div>
+    ${favorites.length?`<div class="nav-group recent"><div class="nav-section-title">Избранное</div>${favorites.map(m=>navItem(m.title,'file','meeting/'+m.id,route.view==='meeting'&&route.id===m.id)).join('')}</div>`:''}
+    <div class="nav-group recent"><div class="nav-section-title">Недавние</div>${state.meetings.slice(0,4).filter(m=>!state.favorites.includes(m.id)).map(m=>navItem(m.title,'file','meeting/'+m.id,route.view==='meeting'&&route.id===m.id)).join('')}</div>
+    <div class="sidebar-bottom">
+      <button class="nav-item" data-action="settings">${icon('settings')}<span>Настройки</span></button>
+      <button class="nav-item" data-action="help">${icon('help')}<span>О прототипе</span></button>
+      <div class="profile-row"><span class="profile-initials">АК</span><span>Алия Касымова</span><span class="muted small" style="margin-left:auto">Демо</span></div>
+      <div class="local-note">${icon('lock')}<span>Локальное рабочее пространство</span></div>
+    </div>`;
+}
+function renderTopbar(){
+  const m=meeting();const onMeeting=route.view==='meeting';
+  const title=route.view==='meetings'?'Совещания':route.view==='tasks'?'Поручения':route.view==='new'?'Новое совещание':m?.title;
+  $('#topbar').innerHTML=`${iconBtn('Открыть навигацию','toggle-sidebar','panel','','mobile-toggle')}${iconBtn('Открыть навигацию','toggle-sidebar','panel','','desktop-open-sidebar')}
+    <div class="breadcrumbs">${onMeeting?`<button class="crumb flex" data-action="nav" data-path="meetings">${icon('calendar')}<span class="crumb-parent-label">Совещания</span></button><span class="slash">/</span><span class="crumb-current">${esc(title)}</span>`:`${icon(route.view==='tasks'?'checkSquare':route.view==='new'?'file':'calendar')}<span class="crumb-current">${esc(title)}</span>`}</div>
+    <div class="topbar-tools"><span class="save-status">${icon(storageAvailable?'check':'alert')}${storageAvailable?'Сохранено на устройстве':'Без сохранения'}</span>
+    ${onMeeting?`${iconBtn(state.favorites.includes(m.id)?'Убрать из избранного':'В избранное','favorite','star','',`star-button ${state.favorites.includes(m.id)?'is-on':''}`)}${m.rawStatus==='ready'?btn('<span class="export-label">Экспорт</span>','export','download','secondary'):''}`:''}
+    <div class="menu-wrap">${iconBtn('Действия страницы','toggle-more','more','aria-haspopup="menu" aria-expanded="false"')}
+      <div class="dropdown" id="pageMenu" role="menu" hidden>
+        ${onMeeting?`<button role="menuitem" data-action="rename">${icon('edit')}Переименовать</button><button role="menuitem" data-action="history">${icon('history')}История изменений</button><hr>`:''}
+        <button role="menuitem" data-action="toggle-wide">${icon('panel')}${state.settings.wide?'Обычная ширина':'Во всю ширину'}</button>
+        <button role="menuitem" data-action="backup">${icon('download')}Сохранить данные в JSON</button>
+        <button role="menuitem" data-action="help">${icon('help')}О прототипе</button>
+      </div>
+    </div></div>`;
+}
+function render(){applySettings();renderSidebar();renderTopbar();$('#main').innerHTML=route.view==='meetings'?renderMeetings():route.view==='tasks'?renderTasks():route.view==='new'?renderNew():renderMeeting();document.title=(route.view==='meeting'?meeting()?.title:route.view==='tasks'?'Поручения':route.view==='new'?'Новое совещание':'Совещания')+' — TaldauAI';if(route.view==='new')updateFileUI();bindAudio();}
+function refresh(){const y=scrollY;render();window.scrollTo(0,y)}
+function footer(m){return `<footer class="page-footer">${icon('lock')}<span>${storageAvailable?'Правки сохраняются в этом браузере':'Правки доступны только в этой вкладке'}</span><span class="footer-right">${m?.demo?'Демонстрационные данные':'Аудио не отправляется на сервер'}</span></footer>`}
+function citations(m,ids,textOnly=false){return (ids||[]).map(id=>{const s=m.transcript.find(s=>s.id===id);return s?`<button type="button" class="source-link ${textOnly?'text-link':''}" data-action="source" data-meeting="${esc(m.id)}" data-source-ids="${esc(id)}" aria-label="Показать источник ${timeLabel(s.at)}">${icon(textOnly?'quote':'link')}${timeLabel(s.at)}</button>`:''}).join(' ')}
+function plural(n,one,few,many){const a=n%100,b=n%10;return a>=11&&a<=14?many:b===1?one:b>=2&&b<=4?few:many}
+function peopleValue(m){return `${m.people.length} ${plural(m.people.length,'участник','участника','участников')}`}
+function renderMeeting(){
+  const m=meeting();if(!m)return renderMeetings();const n=pendingCount(m);const ready=m.rawStatus==='ready';
+  return `<article class="page meeting-page">
+    <div class="page-icon" aria-hidden="true">${icon('notebook')}</div>
+    <h1 class="page-title">${esc(m.title)}</h1>
+    <div class="properties">
+      <div class="property"><div class="property-name">${icon('calendar')}Дата</div><div class="property-value">${fmtDate(m.date,true)}<span class="muted">${esc(m.start||'')}</span></div></div>
+      <div class="property"><div class="property-name">${icon('circleDashed')}Статус</div><div class="property-value">${badge(m)}${ready?`<span class="small muted">${n?`${n} ${plural(n,'предложение','предложения','предложений')} ИИ`:'Проверено человеком'}</span>`:''}</div></div>
+      <div class="property"><div class="property-name">${icon('users')}Участники</div><button class="property-value is-button" data-action="doc-tab" data-tab="people">${esc(peopleValue(m))}${icon('chevronDown')}</button></div>
+      <div class="property"><div class="property-name">${icon('languages')}Язык записи</div><div class="property-value">${esc(m.languages)}<span class="muted small">${m.duration!=='—'?'· '+esc(m.duration):''}</span></div></div>
+    </div>
+    ${!ready?renderProcessing(m):`
+      ${n?`<div class="review-callout" role="status">${icon('sparkles')}<div class="grow"><strong>Черновик готов. Осталось проверить ${n} ${plural(n,'предложение','предложения','предложений')}.</strong><p>Сверьте формулировки, исполнителей и сроки с записью.</p></div>${btn('К проверке','next-issue','arrowRight','tertiary small-btn')}</div>`:`<div class="review-callout">${icon('circleCheck')}<div class="grow"><strong>Все предложения проверены</strong><p>Протокол готов к экспорту. История правок сохранена.</p></div>${btn('Экспорт','export','download','tertiary small-btn')}</div>`}
+      <div class="doc-tabs" role="tablist" aria-label="Содержание совещания">
+        ${[['protocol','file','Протокол'],['transcript','text','Стенограмма'],['people','users','Участники']].map(([key,ico,title])=>`<button class="tab" role="tab" id="tab-${key}" aria-controls="documentContent" aria-selected="${activeDocTab===key}" data-action="doc-tab" data-tab="${key}">${icon(ico)}${title}</button>`).join('')}
+        <span class="right-hint">${m.demo?'Пример · RU / KK':'Локально'}</span>
+      </div>
+      <div id="documentContent" role="tabpanel" aria-labelledby="tab-${activeDocTab}">${activeDocTab==='protocol'?renderProtocol(m):activeDocTab==='people'?renderPeople(m):renderTranscript(m)}</div>`}
+    ${footer(m)}
+  </article>`;
+}
+function renderProtocol(m){
+  return `<section class="section" id="summaryBlock">
+    <div class="section-heading"><h2>Краткое содержание</h2><div class="section-actions">${iconBtn('Редактировать краткое содержание','edit-text','edit','data-kind="summary"')}</div></div>
+    <div class="content-block"><span class="block-grip">${icon('grip')}</span><p class="doc-text">${esc(m.summary.text)} ${citations(m,m.summary.source)}</p></div>
+    ${m.summary.verified?`<div class="verification-note">${icon('check')}Проверено · ${esc(ME)}</div>`:`<div class="suggestion-foot">${icon('sparkles')}<span>Предложено ИИ</span>${btn('Подтвердить','verify-text','check','tertiary small-btn','data-kind="summary"')}</div>`}
+  </section>
+  <section class="section" id="tasksBlock"><div class="section-heading"><h2>Поручения</h2><span class="count">${visibleTasks(m).length}</span><div class="section-actions">${iconBtn('Добавить поручение','add-task','plus')}</div></div>
+    ${visibleTasks(m).map((t,index)=>renderAction(m,t,index)).join('')||'<p class="muted small">В протоколе пока нет поручений.</p>'}
+    <button class="action-add" data-action="add-task">${icon('plus')}Добавить поручение</button>
+  </section>
+  <section class="section" id="decisionsBlock"><div class="section-heading"><h2>Решения</h2><span class="count">${m.decisions.length}</span></div>
+    ${m.decisions.length?m.decisions.map(d=>`<div id="decision-${d.id}"><div class="decision-row">${icon('arrowRight')}<div class="grow">${esc(d.text)} ${citations(m,d.source)}</div>${iconBtn('Редактировать решение','edit-text','edit',`data-kind="decision" data-id="${d.id}"`)}</div>${d.verified?`<div class="verification-note">${icon('check')}Проверено · ${esc(ME)}</div>`:`<div class="suggestion-foot">${icon('sparkles')}<span>Предложено ИИ</span>${btn('Подтвердить','verify-text','check','tertiary small-btn',`data-kind="decision" data-id="${d.id}"`)}</div>`}</div>`).join(''):'<p class="muted small">Отдельные решения в записи не выделены.</p>'}
+  </section>`;
+}
+function renderAction(m,t,index){
+  const open=expandedTasks.has(t.id);const sources=t.source.map(id=>m.transcript.find(s=>s.id===id)).filter(Boolean);const text=sources[0]?.text;
+  return `<div class="action-item ${open?'selected':''}" id="task-${esc(t.id)}">
+    <div class="action-heading"><button class="item-toggle" aria-label="${open?'Свернуть':'Раскрыть'} поручение" aria-expanded="${open}" aria-controls="detail-${esc(t.id)}" data-action="toggle-task" data-id="${esc(t.id)}">${icon('chevronRight')}</button><button class="action-title" data-action="toggle-task" data-id="${esc(t.id)}">${esc(t.title)}</button><span class="item-index">${String(index+1).padStart(2,'0')}</span></div>
+    <div class="action-meta"><span class="meta-piece">${icon('user')}${esc(t.owner||'Не определён')}</span><span class="meta-piece">${icon('calendar')}${t.due?fmtDate(t.due):t.noDue?'Без срока':'Срок не определён'}</span><span class="review-label">${icon(t.verified?'check':'circleDashed')}${t.verified?'Проверено':t.due?'Проверить':'Уточнить срок'}</span>${citations(m,t.source.slice(0,1))}</div>
+    <div class="action-detail" id="detail-${esc(t.id)}" ${!open?'hidden':''}>
+      ${!t.verified?`<div class="reason">${icon('alert')}<span>${esc(t.reason||'Сверьте поручение с исходной репликой и подтвердите результат.')}</span></div>`:`<div class="reason">${icon('check')}<span>Проверено пользователем. Изменения потребуют повторного подтверждения.</span></div>`}
+      ${text?`<blockquote class="evidence-quote">«${esc(text)}» ${citations(m,t.source,true)}</blockquote>`:`<p class="evidence-quote">Добавлено пользователем${t.manualReason?': '+esc(t.manualReason):'. Источник в записи не указан.'}</p>`}
+      <form data-form="inline-task" data-id="${esc(t.id)}">
+        <div class="inline-fields"><div class="field"><label for="owner-${t.id}">Ответственный</label><select id="owner-${t.id}" name="owner"><option value="">Не определён</option>${[...new Set(m.people.map(p=>p.name).concat(t.owner||[]))].filter(Boolean).map(name=>`<option ${name===t.owner?'selected':''}>${esc(name)}</option>`).join('')}</select></div>
+        <div class="field"><label for="due-${t.id}">Срок</label><input id="due-${t.id}" type="date" name="due" value="${esc(t.due)}" ${t.noDue?'disabled':''}><label class="check-label"><input type="checkbox" name="noDue" ${t.noDue?'checked':''}>Срок не установлен</label></div></div>
+        <div class="action-detail-footer"><button type="submit" class="btn ${t.verified?'secondary':'primary'} small-btn" name="intent" value="verify">${icon('check')}${t.verified?'Сохранить и подтвердить':'Подтвердить'}</button><button type="submit" class="btn tertiary small-btn" name="intent" value="draft">Сохранить черновик</button>${iconBtn('Редактировать формулировку','edit-task','edit',`data-id="${esc(t.id)}"`)}${iconBtn('Отклонить поручение','reject-task','close',`data-id="${esc(t.id)}"`)}<span class="quiet">${t.origin==='manual'?'Добавлено вручную':'Предложено ИИ'}</span></div>
+      </form>
+    </div>
+  </div>`;
+}
+function renderPeople(m){return `<section class="section"><div class="section-heading"><h2>Участники совещания</h2><span class="count">${m.people.length}</span></div><p class="transcript-caption">Проверьте написание имён. Изменение имени обновит связанные реплики и поручения.</p>${m.people.map((p,j)=>`<div class="participant-row">${icon('user')}<div class="grow"><strong>${esc(p.name)}</strong><p>${esc(p.role||'Участник совещания')}</p></div>${btn('Изменить','edit-person','','tertiary small-btn',`data-index="${j}"`)}</div>`).join('')||'<p class="muted small">Участники пока не добавлены.</p>'}</section>`}
+function renderAudio(m){const a=audioFiles.get(m.id);return a?`<div class="audio-block" style="display:block"><audio controls src="${esc(a.url)}" data-meeting="${m.id}" aria-label="Аудиозапись совещания"></audio><p class="small muted" style="margin-top:5px">${esc(a.name)}${m.demo?' · прикреплено вручную; метки в примере могут не совпадать':''}</p></div>`:`<div class="audio-block">${icon('wave')}<div class="grow"><strong style="font-weight:500">${m.demo?'В примере нет аудиозаписи':'Аудио недоступно в этой вкладке'}</strong><p style="font-size:10px;margin-top:3px">${m.demo?'Доступны демонстрационные реплики и временные метки.':'Выберите файл снова. Аудио не хранится в localStorage.'}</p></div>${btn('Прикрепить аудио','attach-audio','plus','tertiary small-btn',`data-meeting="${m.id}"`)}</div>`}
+function renderTranscript(m){return `${renderAudio(m)}<div class="transcript-toolbar"><div class="transcript-search">${icon('search')}<input id="transcriptQuery" type="search" placeholder="Найти в стенограмме…" aria-label="Поиск в стенограмме"></div><span id="transcriptCount" class="small muted">${m.transcript.length} реплик</span></div><div id="transcriptList">${m.transcript.map(s=>utterance(m,s)).join('')}</div>`}
+function utterance(m,s,target=false,query=''){let text=esc(s.text);if(query){const escaped=esc(query).replace(/[.*+?^${}()|[\]\\]/g,'\\$&');text=text.replace(new RegExp(escaped,'gi'),hit=>`<mark>${hit}</mark>`)}return `<article class="utterance ${target?'target':''}" id="${sourceState?'peek':'full'}-${esc(s.id)}"><button class="timestamp" data-action="seek-audio" data-meeting="${m.id}" data-at="${s.at}" aria-label="Перейти к ${timeLabel(s.at)}">${timeLabel(s.at)}</button><div><div class="speaker-line"><strong>${esc(s.speaker)}</strong><span class="lang-tag">${s.lang==='kk'?'KK':'RU'}</span>${iconBtn('Редактировать реплику','edit-utterance','edit',`data-id="${esc(s.id)}" data-meeting="${m.id}"`)}</div><p lang="${s.lang}">${text}</p></div></article>`}
+function bindAudio(){/* Native HTML audio playback is used; no fake player state. */}
+
+function renderMeetings(){return `<section class="page database-page"><div class="page-icon">${icon('calendar')}</div><h1>Совещания</h1><p class="page-description">От записи к проверенному протоколу. Все встречи в одном месте.</p>
+  <div class="database-toolbar"><div class="db-tabs" role="tablist" aria-label="Представление совещаний">${[['all','grid','Все совещания'],['review','circleDashed','На проверке'],['ready','circleCheck','Проверенные']].map(([key,ico,title])=>`<button class="tab" role="tab" aria-selected="${meetingFilter===key}" data-action="meeting-filter" data-filter="${key}">${icon(ico)}${title}</button>`).join('')}</div><div class="database-controls"><label class="search-control">${icon('search')}<input id="meetingQuery" class="text-search" type="search" value="${esc(meetingQuery)}" placeholder="Поиск…" aria-label="Поиск совещаний"></label>${iconBtn(sortAsc?'Сначала новые':'Сначала старые','sort-meetings','sort')}${btn('Новая','nav','plus','primary small-btn','data-path="new"')}</div></div>
+  <div id="meetingTable">${meetingTable()}</div>${footer()}</section>`}
+function meetingTable(){let rows=state.meetings.filter(m=>(meetingFilter==='all'||(meetingFilter==='review'&&m.rawStatus==='ready'&&pendingCount(m)>0)||(meetingFilter==='ready'&&m.rawStatus==='ready'&&!pendingCount(m)))&&(`${m.title} ${m.people.map(p=>p.name).join(' ')}`.toLowerCase().includes(meetingQuery.toLowerCase()))).sort((a,b)=>sortAsc?a.date.localeCompare(b.date):b.date.localeCompare(a.date));
+  return rows.length?`<div class="table-scroll"><table class="database-table"><thead><tr><th class="meeting-name-col"><span class="col-heading">${icon('heading')}Название</span></th><th><span class="col-heading">${icon('calendar')}Дата</span></th><th><span class="col-heading">${icon('circleDashed')}Статус</span></th><th><span class="col-heading">${icon('users')}Участники</span></th><th><span class="col-heading">${icon('checkSquare')}Поручения</span></th></tr></thead><tbody>${rows.map(m=>`<tr><td><button class="row-name" data-action="open-meeting" data-id="${m.id}">${icon('file')}<span>${esc(m.title)}</span></button></td><td class="date-cell">${fmtDate(m.date)}</td><td>${badge(m)}</td><td class="person">${esc(peopleValue(m))}</td><td class="muted tabular">${m.rawStatus==='ready'?visibleTasks(m).length:'—'}</td></tr>`).join('')}</tbody></table></div><button class="table-add" data-action="nav" data-path="new">${icon('plus')}Новое совещание</button><div class="table-footer">Всего: ${rows.length}</div>`:`<div class="empty-state">${icon('search')}<h3>${state.meetings.length?'Совещания не найдены':'Здесь появятся ваши совещания'}</h3><p>${state.meetings.length?'Попробуйте другое название или измените условия поиска.':'Добавьте аудиозапись или запишите встречу с микрофона.'}</p>${state.meetings.length?btn('Сбросить фильтры','reset-meeting-filters','','secondary'):btn('Новое совещание','nav','plus','secondary','data-path="new"')}</div>`;
+}
+function renderTasks(){const overdue=allTasks().filter(t=>t.verified&&!t.done&&t.due&&t.due<DEMO_TODAY).length;return `<section class="page database-page"><div class="page-icon">${icon('checkSquare')}</div><h1>Поручения</h1><p class="page-description">Исполнители, сроки и договорённости из ваших совещаний.</p><div class="database-toolbar"><div class="db-tabs" role="tablist" aria-label="Представление поручений">${[['active','list','В работе'],['overdue','clock',`Просрочены${overdue?' '+overdue:''}`],['draft','circleDashed','Черновики'],['done','check','Выполнены']].map(([key,ico,title])=>`<button class="tab" role="tab" aria-selected="${taskFilter===key}" data-action="task-filter" data-filter="${key}">${icon(ico)}${title}</button>`).join('')}</div><div class="database-controls"><label class="search-control">${icon('search')}<input id="taskQuery" class="text-search" type="search" value="${esc(taskQuery)}" placeholder="Поиск…" aria-label="Поиск поручений"></label>${iconBtn('Фильтры поручений','toggle-task-filters','filter',`aria-expanded="${filterPanel}"`,filterPanel?'is-on':'')}</div></div>
+  <div class="filter-row" id="taskFilterPanel" ${filterPanel?'':'hidden'}><label>Ответственный <select id="taskOwner"><option value="">Все</option>${[...new Set(allTasks().map(t=>t.owner).filter(Boolean))].map(p=>`<option ${p===taskOwner?'selected':''}>${esc(p)}</option>`).join('')}</select></label><label>Совещание <select id="taskMeeting"><option value="">Все</option>${state.meetings.map(m=>`<option value="${m.id}" ${m.id===taskMeeting?'selected':''}>${esc(m.title)}</option>`).join('')}</select></label>${btn('Сбросить','reset-task-filters','','tertiary small-btn')}</div>
+  <div id="taskTable">${taskTable()}</div><p class="small muted" style="margin-top:18px">${taskFilter==='draft'?'Предложения ИИ не попадают в работу до подтверждения.':'В работе — только подтверждённые поручения.'} Сроки в демоданных показаны на 23 сентября 2026 года.</p>${footer()}</section>`}
+function taskTable(){const rows=allTasks().filter(t=>{const tab=taskFilter==='draft'?!t.verified:taskFilter==='done'?t.verified&&t.done:taskFilter==='overdue'?t.verified&&!t.done&&t.due&&t.due<DEMO_TODAY:t.verified&&!t.done;return tab&&(!taskOwner||t.owner===taskOwner)&&(!taskMeeting||t.meetingId===taskMeeting)&&(`${t.title} ${t.owner} ${t.meetingTitle}`).toLowerCase().includes(taskQuery.toLowerCase())}).sort((a,b)=>(a.due||'9999').localeCompare(b.due||'9999'));
+return rows.length?`<div class="table-scroll"><table class="database-table"><thead><tr><th style="width:27px"></th><th style="width:39%"><span class="col-heading">${icon('heading')}Поручение</span></th><th><span class="col-heading">${icon('user')}Ответственный</span></th><th><span class="col-heading">${icon('calendar')}Срок</span></th><th><span class="col-heading">${icon('circle')}Статус</span></th><th></th></tr></thead><tbody>${rows.map(t=>`<tr class="${t.done?'task-done':''}"><td><input type="checkbox" class="completion-box" data-task="${t.id}" data-meeting="${t.meetingId}" aria-label="Отметить выполненным: ${esc(t.title)}" ${t.done?'checked':''} ${!t.verified?'disabled':''}></td><td><button class="row-name" data-action="open-task" data-id="${t.id}" data-meeting="${t.meetingId}"><span>${esc(t.title)}</span></button><div class="table-task-meta">${esc(t.meetingTitle)}</div></td><td class="person">${esc(t.owner||'Не определён')}</td><td class="date-cell"><span class="${t.due&&t.due<DEMO_TODAY&&!t.done?'due-past':''}">${fmtDate(t.due)}</span></td><td><span class="tag ${!t.verified?'outline':''}">${icon(t.done?'check':!t.verified?'circleDashed':'clock')}${t.done?'Выполнено':!t.verified?'Черновик':t.due&&t.due<DEMO_TODAY?'Просрочено':'В работе'}</span></td><td>${t.verified&&!t.done?iconBtn('Подготовить напоминание','reminder','mail',`data-id="${t.id}" data-meeting="${t.meetingId}"`):''}</td></tr>`).join('')}</tbody></table></div><div class="table-footer">Всего: ${rows.length}</div>`:`<div class="empty-state">${icon(taskFilter==='overdue'?'circleCheck':'inbox')}<h3>${taskFilter==='overdue'?'Просроченных поручений нет':'Здесь пока нет поручений'}</h3><p>${taskOwner||taskMeeting||taskQuery?'Попробуйте изменить фильтры или поисковый запрос.':'Поручения появятся здесь после проверки протоколов.'}</p>${btn('Сбросить фильтры','reset-task-filters','','secondary')}</div>`}
+
+let newDraft={title:'',date:DEMO_TODAY,participants:'',consent:false};
+function renderNew(){return `<section class="page form-page"><div class="page-icon">${icon('file')}</div>
+  <form class="new-form" id="newMeetingForm" data-form="new-meeting">
+    <label class="small muted" for="newTitle" style="display:block;margin-bottom:8px">Новое совещание</label>
+    <input class="form-title-input" id="newTitle" name="title" placeholder="Без названия" value="${esc(newDraft.title)}" aria-label="Название совещания" required maxlength="160">
+    <p class="page-description" style="margin-top:0">Добавьте запись и контекст, чтобы подготовить протокол.</p>
+    <div class="form-meta"><div class="field"><label for="newDate">Дата совещания</label><input type="date" id="newDate" name="date" required value="${newDraft.date}"></div><div class="field"><label for="newLanguage">Язык записи</label><input id="newLanguage" value="Русский и қазақша" readonly></div></div>
+    <div class="doc-tabs" role="tablist" aria-label="Способ добавления записи"><button type="button" role="tab" class="tab" aria-selected="${formMode==='upload'}" data-action="upload-tab" data-mode="upload">${icon('upload')}Загрузить файл</button><button type="button" role="tab" class="tab" aria-selected="${formMode==='record'}" data-action="upload-tab" data-mode="record">${icon('mic')}Записать с микрофона</button></div>
+    <div id="uploadMode" ${formMode!=='upload'?'hidden':''}><div class="dropzone" id="dropzone">${icon('upload')}<h3>Перетащите аудиозапись сюда</h3><p>MP3, M4A, WAV, OGG, WEBM · до 250 МБ в этом прототипе</p>${btn('Выбрать файл','choose-file','','secondary')}<input id="fileInput" type="file" accept="audio/*,.mp3,.m4a,.wav,.ogg,.webm" hidden></div></div>
+    <div id="recordMode" ${formMode!=='record'?'hidden':''}><div class="recorder"><button type="button" class="record-button ${mediaRecorder?.state==='recording'?'recording':''}" id="recordButton" data-action="record" aria-label="${mediaRecorder?.state==='recording'?'Остановить запись':'Начать запись'}">${icon(mediaRecorder?.state==='recording'?'stop':'mic')}</button><span class="record-time" id="recordTime">00:00</span><span id="recordHint" class="small muted">${mediaRecorder?.state==='recording'?'Идёт запись с микрофона':'Запись только с микрофона устройства'}</span></div></div>
+    <div id="selectedFile" class="selected-file" hidden></div><div id="fileError" class="file-error" role="alert" hidden></div>
+    <div class="form-help">${icon('lock')}<span>Файл остаётся на устройстве. Распознавание и генерация протокола в этой версии не подключены. Можно создать запись совещания или открыть демонстрационный результат.</span></div>
+    <div class="form-section field"><label for="newParticipants" class="field-label">Участники</label><textarea id="newParticipants" name="participants" rows="3" placeholder="Имена участников — по одному на строку">${esc(newDraft.participants)}</textarea><span class="small muted">Поможет сопоставить говорящих с именами в протоколе.</span></div>
+    <label class="check-label consent-row"><input id="consent" type="checkbox" name="consent" ${newDraft.consent?'checked':''} required><span>Подтверждаю, что участники уведомлены о записи и её обработке.</span></label>
+    <div class="form-buttons">${btn('Отмена','nav','','tertiary','data-path="meetings"')}<button class="btn primary large-btn" type="submit">${icon('plus')}Создать совещание</button></div>
+  </form>
+  <div style="margin-top:16px;text-align:right">${btn('Посмотреть готовый пример','nav','arrowUpRight','tertiary small-btn','data-path="meeting/m1"')}</div>${footer()}
+</section>`}
+function captureNewDraft(){const f=$('#newMeetingForm');if(!f)return;newDraft={title:f.elements.title.value,date:f.elements.date.value,participants:f.elements.participants.value,consent:f.elements.consent.checked}}
+function showFileError(message){const el=$('#fileError');if(el){el.textContent=message;el.hidden=false}else toast(message,'alert')}
+function validateFile(file){if(!file)return 'Файл не выбран.';if(!file.size)return 'Файл пустой. Выберите запись, которая содержит аудио.';if(file.size>250*1024*1024)return 'Файл больше 250 МБ. Выберите меньший файл для локального прототипа.';if(!/\.(mp3|m4a|wav|ogg|webm|aac)$/i.test(file.name))return 'Этот формат не поддерживается. Выберите MP3, M4A, WAV, OGG, AAC или WEBM.';return ''}
+async function chooseAudio(file){const error=validateFile(file);if(error){showFileError(error);return}selectedFile=file;$('#fileError')&&( $('#fileError').hidden=true);updateFileUI();const probe=document.createElement('audio');const url=URL.createObjectURL(file);probe.preload='metadata';probe.onloadedmetadata=()=>{if(selectedFile===file&&Number.isFinite(probe.duration)){selectedFile._duration=probe.duration;updateFileUI()}URL.revokeObjectURL(url)};probe.onerror=()=>URL.revokeObjectURL(url);probe.src=url;setTimeout(()=>URL.revokeObjectURL(url),10000)}
+function updateFileUI(){const el=$('#selectedFile');if(!el)return;el.hidden=!selectedFile;const drop=$('#dropzone');if(drop)drop.hidden=!!selectedFile;if(!selectedFile)return;el.innerHTML=`${icon('wave')}<div class="grow"><strong>${esc(selectedFile.name)}</strong><p>${(selectedFile.size/1048576).toLocaleString('ru-RU',{maximumFractionDigits:1})} МБ${selectedFile._duration?' · '+timeLabel(selectedFile._duration):''} · выбран локально</p></div>${iconBtn('Скачать выбранную запись','download-audio','download')}${iconBtn('Удалить выбранный файл','remove-file','close')}`}
+async function toggleRecord(){
+  if(mediaRecorder?.state==='recording'){mediaRecorder.stop();return}
+  captureNewDraft();if(!newDraft.consent){showFileError('Перед записью подтвердите, что участники уведомлены.');$('#consent')?.focus();return}
+  if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder){showFileError('Запись недоступна в этом браузере или контексте. Откройте страницу через localhost/HTTPS либо загрузите готовый файл.');return}
+  try{mediaStream=await navigator.mediaDevices.getUserMedia({audio:true});mediaRecorder=new MediaRecorder(mediaStream);recordChunks=[];recordStart=Date.now();mediaRecorder.ondataavailable=e=>{if(e.data.size)recordChunks.push(e.data)};mediaRecorder.onstop=()=>{clearInterval(recordTimer);mediaStream?.getTracks().forEach(t=>t.stop());const type=mediaRecorder.mimeType||'audio/webm';const extension=type.includes('mp4')?'m4a':type.includes('ogg')?'ogg':'webm';const file=new File(recordChunks,`Совещание-${newDraft.date}.${extension}`,{type});file._duration=(Date.now()-recordStart)/1000;selectedFile=file;formMode='upload';render();toast('Запись остановлена. Сохраните файл до закрытия вкладки.');};mediaRecorder.start(1000);$('#recordButton').classList.add('recording');$('#recordButton').innerHTML=icon('stop');$('#recordButton').setAttribute('aria-label','Остановить запись');$('#recordHint').textContent='Идёт запись с микрофона';$('#fileError').hidden=true;recordTimer=setInterval(()=>{if($('#recordTime'))$('#recordTime').textContent=timeLabel((Date.now()-recordStart)/1000)},500)}catch(e){mediaStream?.getTracks().forEach(t=>t.stop());showFileError(e.name==='NotAllowedError'?'Нет разрешения на микрофон. Разрешите доступ в браузере или выберите готовый файл.':'Не удалось подключить микрофон. Проверьте устройство и попробуйте снова.')}
+}
+function createMeeting(form){captureNewDraft();if(mediaRecorder?.state==='recording'){showFileError('Остановите запись перед созданием совещания.');return}if(!selectedFile){showFileError('Выберите аудиозапись или запишите её с микрофона.');return}const title=newDraft.title.trim();if(!title){form.elements.title.setCustomValidity('Введите название совещания.');form.elements.title.reportValidity();return}const names=[...new Set(newDraft.participants.split(/\n|;/).map(x=>x.trim()).filter(Boolean))];const id=uid('meeting');const url=URL.createObjectURL(selectedFile);audioFiles.set(id,{url,name:selectedFile.name});const m={id,title,date:newDraft.date,start:'',duration:selectedFile._duration?timeLabel(selectedFile._duration):'—',fileName:selectedFile.name,languages:'Русский, қазақша',rawStatus:'uploaded',demo:false,people:names.map(name=>({name,role:'Участник'})),summary:{text:'',verified:false,source:[]},decisions:[],tasks:[],transcript:[]};state.meetings.unshift(m);log(m,'Файл выбран локально. Распознавание не запускалось.');save();selectedFile=null;newDraft={title:'',date:DEMO_TODAY,participants:'',consent:false};nav('meeting/'+id);toast('Совещание создано. Аудио доступно до закрытия вкладки.')}
+function renderProcessing(m){const error=m.rawStatus==='error',uploaded=m.rawStatus==='uploaded';return `<section class="process-section">
+  <div class="section-heading"><h2>${error?'Не удалось прочитать аудиофайл':uploaded?'Запись добавлена':'Обработка записи'}</h2>${m.demo?'<span class="tag outline">Демо состояния</span>':''}</div>
+  ${error?`<p class="process-note">Пример ошибки: аудиофайл повреждён или не содержит доступной звуковой дорожки. Проверьте, воспроизводится ли запись, и выберите другой файл.</p><div class="file-error" style="margin:18px 0">${icon('alert')} Аудиодорожка недоступна. Код: AUDIO_DECODE_FAILED.<br><span class="small muted">Это демонстрационная ошибка, не результат проверки вашего файла.</span></div><div class="flex" style="margin-top:18px;flex-wrap:wrap">${btn('Выбрать другую запись','nav','upload','secondary','data-path="new"')}${btn('Повторить демо','start-demo','rotate','tertiary')}</div>`:
+    uploaded?`${renderAudio(m)}<p class="process-note">Метаданные совещания сохранены в этом браузере. Аудиофайл доступен только в текущей вкладке. Для реального распознавания нужен подключённый ML-модуль и бэкенд.</p><div class="review-callout" style="margin-top:24px">${icon('sparkles')}<div class="grow"><strong>Распознавание пока не подключено</strong><p>Ниже можно посмотреть, как выглядит обработка на демонстрационных данных.</p></div></div><div class="flex" style="flex-wrap:wrap">${btn('Посмотреть демо обработки','start-demo','play','secondary')}${btn('Открыть пример протокола','nav','arrowUpRight','tertiary','data-path="meeting/m1"')}</div>`:
+    `<p class="process-note">Симуляция этапов интерфейса. Аудиозапись не отправляется модели, результаты ниже не извлекаются из вашего файла.</p><div class="process-steps" id="processSteps">${renderSteps()}</div><p id="processStatus" class="small muted">${processFinished?'Демонстрация завершена. Откройте подготовленный пример протокола.':'Показан пример промежуточного состояния.'}</p><div class="flex" style="margin-top:23px;flex-wrap:wrap">${processFinished?btn('Открыть пример протокола','nav','arrowRight','primary','data-path="meeting/m1"'):btn('Продолжить демо','run-demo','play','secondary')}${btn('Посмотреть ошибку','nav','alert','tertiary','data-path="meeting/m5"')}</div>`}
+  </section>`}
+function renderSteps(){return processLabels.map((name,j)=>`<div class="process-step ${j<processStage?'done':j===processStage?'active':''}">${icon(j<processStage?'check':j===processStage?'loader':'circle',j===processStage&&processTimer?'spinner':'')}<span>${name}</span></div>`).join('')}
+function startDemo(){clearInterval(processTimer);processStage=2;processFinished=false;if(route.id==='m4'){runDemo();return}nav('meeting/m4')}
+function runDemo(){clearInterval(processTimer);processStage=1;processFinished=false;processTimer=setInterval(()=>{processStage++;if(processStage>=5){clearInterval(processTimer);processTimer=null;processFinished=true;refresh();return}if($('#processSteps'))$('#processSteps').innerHTML=renderSteps()},850);refresh()}
+
+function openSource(mId,ids,button){const m=meeting(mId);const valid=ids.filter(id=>m?.transcript.some(s=>s.id===id));if(!m||!valid.length)return;$('#citationPreview').hidden=true;sourceState={meetingId:mId,ids:valid};sourceReturn=button||document.activeElement;renderSource();document.body.classList.add('source-open');$('#sourcePanel').hidden=false;$('#sourcePanel [data-action="close-source"]').focus({preventScroll:true})}
+function renderSource(){if(!sourceState)return;const m=meeting(sourceState.meetingId);const indices=sourceState.ids.map(id=>m.transcript.findIndex(s=>s.id===id)).filter(j=>j>=0);const min=Math.max(0,Math.min(...indices)-1),max=Math.min(m.transcript.length-1,Math.max(...indices)+1);const speakers=m.transcript.slice(min,max+1);
+  $('#sourcePanel').innerHTML=`<div class="source-panel-header">${icon('quote')}<strong class="grow">Источник в стенограмме</strong>${iconBtn('Открыть всю стенограмму','full-transcript','arrowUpRight')}${iconBtn('Закрыть источник','close-source','close')}</div><div class="source-panel-body"><p class="source-context">${esc(m.title)}</p><h2>Что было сказано</h2><p class="source-context">Выделены реплики, на которых основан черновик.</p>${speakers.map(s=>utterance(m,s,sourceState.ids.includes(s.id))).join('')}<div style="margin-top:24px">${renderAudio(m)}</div></div><div class="source-panel-footer">${btn('Вернуться к протоколу','close-source','arrowLeft','tertiary')}</div>`;
+}
+function closeSource(){if(!sourceState)return;sourceState=null;$('#sourcePanel').hidden=true;document.body.classList.remove('source-open');if(sourceReturn?.isConnected)sourceReturn.focus({preventScroll:true});sourceReturn=null}
+function fullTranscript(){const src=sourceState;if(!src)return;closeSource();activeDocTab='transcript';if(route.id===src.meetingId){refresh();setTimeout(()=>highlightUtterance(src.ids[0]),30)}else{nav('meeting/'+src.meetingId);setTimeout(()=>highlightUtterance(src.ids[0]),80)}}
+function highlightUtterance(id){const target=$('#full-'+CSS.escape(id));if(target){$$('.utterance.target').forEach(el=>el.classList.remove('target'));target.classList.add('target');target.scrollIntoView({block:'center',behavior:'smooth'})}}
+function showCitationPreview(button){if(innerWidth<=760||!$('#sourcePanel').hidden)return;const m=meeting(button.dataset.meeting),s=m?.transcript.find(s=>s.id===button.dataset.sourceIds.split(',')[0]);if(!s)return;const rect=button.getBoundingClientRect();const popup=$('#citationPreview');popup.innerHTML=`<div class="preview-label">${icon('quote')}${timeLabel(s.at)} · ${esc(s.speaker)}</div><p lang="${s.lang}">${esc(s.text)}</p><div class="preview-footer">Нажмите, чтобы открыть реплику в контексте</div>`;popup.hidden=false;const h=popup.offsetHeight;popup.style.left=Math.min(Math.max(12,rect.left-60),innerWidth-334)+'px';popup.style.top=(rect.bottom+h+16>innerHeight?Math.max(8,rect.top-h-9):rect.bottom+9)+'px'}
+
+let modalReturn=null;
+function openModal(title,body,foot='',className=''){const modal=$('#modal');if(!modal.open)modalReturn=document.activeElement;else modal.close();modal.className='modal '+className;modal.innerHTML=`<div class="modal-header"><h2 id="modalTitle">${title}</h2>${iconBtn('Закрыть окно','close-modal','close')}</div><div class="modal-body">${body}</div>${foot?`<div class="modal-footer">${foot}</div>`:''}`;modal.showModal()}
+function closeModal(){if($('#modal').open)$('#modal').close();if(modalReturn?.isConnected)modalReturn.focus({preventScroll:true})}
+function openSearch(){openModal('Поиск по рабочему пространству','<div id="searchResults"></div>','','search-modal');$('#modal').innerHTML=`<div class="modal-header">${icon('search')}<h2 id="modalTitle" hidden>Поиск по рабочему пространству</h2><input class="command-input" id="globalSearch" placeholder="Найти совещание…" aria-label="Поиск по рабочему пространству" autocomplete="off">${iconBtn('Закрыть поиск','close-modal','close')}</div><div class="command-label">Совещания</div><div id="searchResults" class="search-results"></div><div class="search-hint"><span>Tab — выбрать</span><span>Enter — открыть</span><span>Esc — закрыть</span></div>`;updateSearch('');$('#globalSearch').focus()}
+function updateSearch(query){const q=query.toLowerCase().trim();const rows=state.meetings.filter(m=>(m.title+' '+m.summary.text+' '+m.people.map(p=>p.name).join(' ')).toLowerCase().includes(q));$('#searchResults').innerHTML=rows.length?rows.map(m=>`<button class="command-result" data-action="search-open" data-id="${m.id}">${icon('file')}<div class="grow"><strong>${esc(m.title)}</strong><p>${fmtDate(m.date,true)} · ${statusInfo(m).label}</p></div>${icon('arrowUpRight')}</button>`).join(''):'<div class="empty-state" style="padding:28px 20px;border:0"><p style="margin:0 auto">Ничего не найдено. Попробуйте другое название.</p></div>'}
+function showSettings(){openModal('Настройки',`<p class="modal-description">Настройки относятся только к этому браузеру. Профиль и данные не синхронизируются с сервером.</p><div class="setting-row"><label for="wideSetting">Широкая страница<small>Использовать всю доступную ширину для документов.</small></label><input type="checkbox" class="toggle" id="wideSetting" ${state.settings.wide?'checked':''}></div><div class="setting-row"><label for="compactSetting">Компактные таблицы<small>Уменьшить высоту строк в базах.</small></label><input type="checkbox" class="toggle" id="compactSetting" ${state.settings.compact?'checked':''}></div><div class="setting-row"><div class="grow"><span class="small">Локальные данные</span><p class="small muted">${state.meetings.length} совещаний · ${storageAvailable?'сохранение включено':'сохранение недоступно'}</p></div>${btn('Скачать JSON','backup','download','secondary small-btn')}</div><div class="setting-row"><div class="grow"><span class="small">Вернуться к исходному примеру</span><p class="small muted">Удалит правки этого прототипа.</p></div>${btn('Сбросить','confirm-reset','','secondary small-btn')}</div>`,btn('Готово','close-modal','','primary'))}
+function showHelp(){openModal('О прототипе TaldauAI',`<div class="demo-notice">Это самостоятельный прототип интерфейса, не продукт Notion и не интеграция с ним. Демонстрационные имена, совещания и реплики вымышлены.</div><h3 style="margin-bottom:8px">Что работает</h3><p class="modal-description">Навигация, поиск и фильтры; редактирование текста, участников и поручений; проверка предложений; переход к источнику; локальное сохранение; подготовка напоминаний; экспорт настоящего DOCX. Запись микрофона работает только при поддержке и разрешении браузера.</p><h3 style="margin-bottom:8px">Что не подключено</h3><p class="modal-description">Бэкенд, распознавание аудио, разделение говорящих, перевод, серверное хранение, отправка писем и совместная работа. Экраны обработки явно помечены как демонстрационные.</p><h3 style="margin-bottom:8px">Как начать</h3><p class="modal-description" style="margin-bottom:0">Откройте поручение в протоколе, перейдите по временной метке к исходной фразе, проверьте имя и срок. Подтверждённые поручения появятся во вкладке «В работе». Непроверенный документ можно экспортировать только как черновик.</p>`,btn('Понятно','close-modal','','primary'))}
+function showHistory(){const m=meeting();const rows=state.history.filter(e=>e.meeting===m.id);openModal('История изменений',`<p class="modal-description">Локальная история: ${esc(m.title)}. Это не защищённый серверный журнал аудита.</p>${rows.map(row=>`<div class="history-row"><time>${new Date(row.time).toLocaleString('ru-RU',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</time><p>${esc(row.text)}</p></div>`).join('')||'<p class="small muted">Изменений пока нет.</p>'}`,btn('Закрыть','close-modal','','secondary'))}
+function editText(kind,id){const m=meeting();const data=kind==='summary'?m.summary:m.decisions.find(d=>d.id===id);if(!data)return;openModal(kind==='summary'?'Краткое содержание':'Решение',`<form id="textEditForm" data-form="text-edit" data-kind="${kind}" data-id="${esc(id||'')}" data-meeting="${m.id}"><div class="field"><label for="editTextArea">Формулировка</label><textarea id="editTextArea" name="text" rows="7" required>${esc(data.text)}</textarea></div><label class="check-label"><input type="checkbox" name="verified">Я проверила формулировку по стенограмме</label></form><p class="small muted" style="margin-top:15px">Без подтверждения изменённый текст будет сохранён как черновик.</p>`,`${btn('Отмена','close-modal','','tertiary')}<button class="btn primary" form="textEditForm" type="submit">Сохранить</button>`)}
+function editTask(id){const m=meeting();const t=id?m.tasks.find(t=>t.id===id):{title:'',owner:'',due:'',source:[],manualReason:''};if(!t)return;openModal(id?'Редактировать поручение':'Новое поручение',`<form id="taskEditForm" data-form="task-edit" data-id="${esc(id||'')}" data-meeting="${m.id}"><div class="field"><label for="taskTitle">Формулировка</label><textarea id="taskTitle" name="title" required rows="2">${esc(t.title)}</textarea></div><div class="inline-fields"><div class="field"><label for="taskOwnerEdit">Ответственный</label><select id="taskOwnerEdit" name="owner"><option value="">Не определён</option>${m.people.map(p=>`<option ${t.owner===p.name?'selected':''}>${esc(p.name)}</option>`).join('')}</select></div><div class="field"><label for="taskDueEdit">Срок</label><input type="date" id="taskDueEdit" name="due" value="${esc(t.due)}"></div></div><div class="field"><label for="taskSource">Основная реплика-источник</label><select id="taskSource" name="source"><option value="">Добавлено вручную, без источника</option>${m.transcript.map(s=>`<option value="${s.id}" ${t.source[0]===s.id?'selected':''}>${timeLabel(s.at)} · ${esc(s.speaker)} — ${esc(s.text.slice(0,45))}…</option>`).join('')}</select></div><div class="field"><label for="manualReason">Комментарий к поручению (необязательно)</label><input id="manualReason" name="manualReason" value="${esc(t.manualReason||'')}" placeholder="Например: добавлено по итогам обсуждения"></div></form><p class="small muted">${id?'Изменённое поручение потребуется подтвердить повторно.':'Поручение будет добавлено как пользовательский черновик.'}</p>`,`${btn('Отмена','close-modal','','tertiary')}<button class="btn primary" type="submit" form="taskEditForm">${id?'Сохранить':'Добавить'}</button>`)}
+function editPerson(index){const m=meeting(),p=m.people[index];if(!p)return;openModal('Участник совещания',`<form id="personForm" data-form="person" data-index="${index}" data-meeting="${m.id}"><div class="field"><label for="personName">Имя и фамилия</label><input id="personName" name="name" value="${esc(p.name)}" required></div><div class="field"><label for="personRole">Роль</label><input id="personRole" name="role" value="${esc(p.role)}"></div></form><p class="small muted">Изменение имени обновит связанные реплики. Поручения этого исполнителя потребуется проверить повторно.</p>`,`${btn('Отмена','close-modal','','tertiary')}<button class="btn primary" type="submit" form="personForm">Сохранить</button>`)}
+function editUtterance(mId,id){const m=meeting(mId),s=m?.transcript.find(s=>s.id===id);if(!s)return;openModal('Исправить реплику',`<form id="utteranceForm" data-form="utterance" data-meeting="${m.id}" data-id="${s.id}"><p class="modal-description">${timeLabel(s.at)} · изменения затронут связанные предложения в протоколе.</p><div class="inline-fields"><div class="field"><label for="speakerEdit">Говорящий</label><select id="speakerEdit" name="speaker">${m.people.map(p=>`<option ${p.name===s.speaker?'selected':''}>${esc(p.name)}</option>`).join('')}</select></div><div class="field"><label for="languageEdit">Язык реплики</label><select id="languageEdit" name="lang"><option value="ru" ${s.lang==='ru'?'selected':''}>Русский</option><option value="kk" ${s.lang==='kk'?'selected':''}>Қазақша</option></select></div></div><div class="field"><label for="utteranceEdit">Текст реплики</label><textarea id="utteranceEdit" rows="6" name="text" required>${esc(s.text)}</textarea></div></form>`,`${btn('Отмена','close-modal','','tertiary')}<button class="btn primary" type="submit" form="utteranceForm">Сохранить</button>`)}
+function reminder(mId,id){const m=meeting(mId),t=m?.tasks.find(t=>t.id===id);if(!t)return;const text=`${t.owner}, добрый день!\n\nНапоминаю о поручении «${t.title}» по итогам совещания «${m.title}» от ${fmtDate(m.date,true)}.\n\nСрок: ${t.due?fmtDate(t.due,true):'не установлен'}. Пожалуйста, сообщите о текущем статусе выполнения.\n\nС уважением,\n${ME}`;openModal('Подготовить напоминание',`<p class="modal-description">Текст можно отредактировать и скопировать. Письмо не отправляется автоматически.</p><div class="field"><label for="reminderText">Сообщение для ${esc(t.owner)}</label><textarea id="reminderText" rows="10">${esc(text)}</textarea></div>`,`${btn('Закрыть','close-modal','','tertiary')}${btn('Скопировать текст','copy-reminder','copy','primary')}`)}
+function showExport(){const m=meeting(),n=pendingCount(m);openModal('Экспорт протокола',`<p class="modal-description">${esc(m.title)}</p><div class="field" style="margin-bottom:8px"><label class="check-label"><input id="exportSources" type="checkbox" checked>Добавить исходные реплики к поручениям</label><label class="check-label"><input id="exportTranscript" type="checkbox">Приложить полную стенограмму</label></div><div class="export-choice"><strong>Проверенный протокол</strong><p>${n?`Осталось проверить: ${n}. Экспорт станет доступен после подтверждения текста и поручений.`:'Все предложения подтверждены пользователем. Можно скачать документ.'}</p>${btn('Скачать DOCX','download-docx','download','primary',`data-draft="false" ${n?'disabled':''}`)}</div><div class="export-choice"><strong>Черновик с отметками проверки</strong><p>Непроверенные данные будут явно обозначены в документе. ${m.demo?'Экспорт содержит демонстрационные данные.':''}</p>${btn('Скачать черновик DOCX','download-docx','file','secondary','data-draft="true"')}</div>`,btn('Закрыть','close-modal','','tertiary'))}
+
+/* A small STORE-mode ZIP writer creates a real Office Open XML .docx offline. */
+const crcTable=(()=>{const out=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=(c&1)?0xedb88320^(c>>>1):c>>>1;out[n]=c>>>0}return out})();
+function crc32(bytes){let crc=0xffffffff;for(const b of bytes)crc=crcTable[(crc^b)&255]^(crc>>>8);return (crc^0xffffffff)>>>0}
+function zipStore(entries){const encoder=new TextEncoder(),locals=[],central=[];let offset=0;for(const [name,text] of entries){const n=encoder.encode(name),data=encoder.encode(text),crc=crc32(data);const local=new Uint8Array(30+n.length),v=new DataView(local.buffer);v.setUint32(0,0x04034b50,true);v.setUint16(4,20,true);v.setUint16(6,0x0800,true);v.setUint16(12,0x5d37,true);v.setUint32(14,crc,true);v.setUint32(18,data.length,true);v.setUint32(22,data.length,true);v.setUint16(26,n.length,true);local.set(n,30);locals.push(local,data);const c=new Uint8Array(46+n.length),w=new DataView(c.buffer);w.setUint32(0,0x02014b50,true);w.setUint16(4,20,true);w.setUint16(6,20,true);w.setUint16(8,0x0800,true);w.setUint16(14,0x5d37,true);w.setUint32(16,crc,true);w.setUint32(20,data.length,true);w.setUint32(24,data.length,true);w.setUint16(28,n.length,true);w.setUint32(42,offset,true);c.set(n,46);central.push(c);offset+=local.length+data.length}const length=central.reduce((n,a)=>n+a.length,0),end=new Uint8Array(22),dv=new DataView(end.buffer);dv.setUint32(0,0x06054b50,true);dv.setUint16(8,entries.length,true);dv.setUint16(10,entries.length,true);dv.setUint32(12,length,true);dv.setUint32(16,offset,true);return new Blob([...locals,...central,end],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'})}
+function downloadBlob(blob,name){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000)}
+function docxBlob(m,draft,includeSources,includeTranscript){
+  const x=s=>esc(s).replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g,'');
+  const p=(text,style='Normal',lang='ru-RU')=>`<w:p><w:pPr><w:pStyle w:val="${style}"/></w:pPr><w:r><w:rPr><w:lang w:val="${lang==='kk'?'kk-KZ':'ru-RU'}"/></w:rPr><w:t xml:space="preserve">${x(text)}</w:t></w:r></w:p>`;
+  let body=p(draft?'ЧЕРНОВИК ПРОТОКОЛА':'ПРОТОКОЛ СОВЕЩАНИЯ','Subtitle')+p(m.title,'Title')+p(`Дата: ${fmtDate(m.date,true)}${m.start?' · '+m.start:''}`,'Meta')+p(`Участники: ${m.people.map(p=>p.name).join(', ')||'не указаны'}`,'Meta');
+  if(m.demo)body+=p('Демонстрационные данные. Не является протоколом реального совещания.','Meta');
+  if(draft)body+=p('Документ является черновиком. Неподтверждённые предложения отмечены как «Не проверено».','Quote');
+  body+=p('Краткое содержание','Heading1')+p((m.summary.verified?'':'[Не проверено] ')+m.summary.text);
+  body+=p('Решения','Heading1');m.decisions.forEach((d,j)=>{body+=p(`${j+1}. ${d.verified?'':'[Не проверено] '}${d.text}`)});if(!m.decisions.length)body+=p('Отдельные решения не выделены.');
+  body+=p('Поручения','Heading1');visibleTasks(m).forEach((t,j)=>{body+=p(`${j+1}. ${t.title}`,'Heading2');body+=p(`Ответственный: ${t.owner||'не определён'}. Срок: ${t.due?fmtDate(t.due,true):t.noDue?'не установлен':'нужно уточнить'}.`);body+=p(t.verified?`Проверено пользователем: ${t.reviewer||ME}.`:'Не проверено — требуется подтверждение.','Meta');if(t.origin==='manual')body+=p('Добавлено вручную'+(t.manualReason?': '+t.manualReason:'.'),'Meta');if(includeSources)t.source.forEach(id=>{const s=m.transcript.find(s=>s.id===id);if(s)body+=p(`Основание ${timeLabel(s.at)} · ${s.speaker}: «${s.text}»`,'Quote',s.lang)})});
+  if(!visibleTasks(m).length)body+=p('Поручения отсутствуют.');
+  if(includeTranscript){body+=p('Приложение. Стенограмма','Heading1');m.transcript.forEach(s=>{body+=p(`${timeLabel(s.at)} · ${s.speaker} · ${s.lang.toUpperCase()}`,'Meta')+p(s.text,'Normal',s.lang)})}
+  const wordNs='http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+  const styles=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:styles xmlns:w="${wordNs}"><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="22"/><w:color w:val="292929"/><w:lang w:val="ru-RU"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:after="120" w:line="300" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults><w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/></w:style><w:style w:type="paragraph" w:styleId="Title"><w:name w:val="Title"/><w:basedOn w:val="Normal"/><w:pPr><w:keepNext/><w:spacing w:before="100" w:after="240"/></w:pPr><w:rPr><w:b/><w:sz w:val="38"/></w:rPr></w:style><w:style w:type="paragraph" w:styleId="Subtitle"><w:name w:val="Subtitle"/><w:basedOn w:val="Normal"/><w:pPr><w:keepNext/></w:pPr><w:rPr><w:sz w:val="19"/><w:color w:val="666666"/></w:rPr></w:style><w:style w:type="paragraph" w:styleId="Heading1"><w:name w:val="heading 1"/><w:basedOn w:val="Normal"/><w:pPr><w:keepNext/><w:spacing w:before="300" w:after="130"/><w:outlineLvl w:val="0"/></w:pPr><w:rPr><w:b/><w:sz w:val="28"/></w:rPr></w:style><w:style w:type="paragraph" w:styleId="Heading2"><w:name w:val="heading 2"/><w:basedOn w:val="Normal"/><w:pPr><w:keepNext/><w:spacing w:before="160" w:after="90"/><w:outlineLvl w:val="1"/></w:pPr><w:rPr><w:b/><w:sz w:val="23"/></w:rPr></w:style><w:style w:type="paragraph" w:styleId="Meta"><w:name w:val="Meta"/><w:basedOn w:val="Normal"/><w:pPr><w:spacing w:after="90"/></w:pPr><w:rPr><w:sz w:val="19"/><w:color w:val="666666"/></w:rPr></w:style><w:style w:type="paragraph" w:styleId="Quote"><w:name w:val="Quote"/><w:basedOn w:val="Normal"/><w:pPr><w:ind w:left="200"/><w:spacing w:before="60" w:after="140"/></w:pPr><w:rPr><w:sz w:val="20"/><w:color w:val="555555"/></w:rPr></w:style></w:styles>`;
+  const doc=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="${wordNs}" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body>${body}<w:sectPr><w:footerReference w:type="default" r:id="rId2"/><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134" w:header="567" w:footer="567"/></w:sectPr></w:body></w:document>`;
+  const contentTypes='<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/><Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/></Types>';
+  const relRoot='<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>';
+  const relDoc='<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer1.xml"/></Relationships>';
+  const foot=`<?xml version="1.0" encoding="UTF-8"?><w:ftr xmlns:w="${wordNs}"><w:p><w:pPr><w:jc w:val="right"/></w:pPr><w:r><w:rPr><w:sz w:val="18"/><w:color w:val="777777"/></w:rPr><w:t>TaldauAI · ${draft?'Черновик':'Проверено пользователем'} · </w:t></w:r><w:fldSimple w:instr="PAGE"/></w:p></w:ftr>`;
+  return zipStore([['[Content_Types].xml',contentTypes],['_rels/.rels',relRoot],['word/document.xml',doc],['word/styles.xml',styles],['word/_rels/document.xml.rels',relDoc],['word/footer1.xml',foot]]);
+}
+
+/* Event delegation keeps newly rendered content interactive. */
+document.addEventListener('click',async event=>{
+  const el=event.target.closest('[data-action]');const menu=$('#pageMenu');
+  if(menu&&!event.target.closest('.menu-wrap')){menu.hidden=true;$('[data-action="toggle-more"]')?.setAttribute('aria-expanded','false')}
+  if(!el||el.disabled)return;const action=el.dataset.action;const m=meeting();
+  if(action!=='toggle-more'&&menu){menu.hidden=true;$('[data-action="toggle-more"]')?.setAttribute('aria-expanded','false')}
+  switch(action){
+    case 'nav': closeModal();nav(el.dataset.path);break;
+    case 'open-meeting':activeDocTab='protocol';nav('meeting/'+el.dataset.id);break;
+    case 'toggle-sidebar':toggleSidebar();break;
+    case 'search':openSearch();break;
+    case 'search-open':closeModal();activeDocTab='protocol';nav('meeting/'+el.dataset.id);break;
+    case 'toggle-more':if(menu){menu.hidden=!menu.hidden;el.setAttribute('aria-expanded',String(!menu.hidden))}break;
+    case 'favorite':state.favorites=state.favorites.includes(m.id)?state.favorites.filter(id=>id!==m.id):[...state.favorites,m.id];save();renderSidebar();renderTopbar();break;
+    case 'toggle-wide':state.settings.wide=!state.settings.wide;save();renderTopbar();break;
+    case 'settings':showSettings();break;
+    case 'help':showHelp();break;
+    case 'close-modal':closeModal();break;
+    case 'history':showHistory();break;
+    case 'rename':openModal('Название совещания',`<form id="renameForm" data-form="rename" data-meeting="${m.id}"><div class="field"><label for="renameInput">Название</label><input id="renameInput" name="title" value="${esc(m.title)}" required maxlength="160"></div></form>`,`${btn('Отмена','close-modal','','tertiary')}<button class="btn primary" form="renameForm" type="submit">Сохранить</button>`);break;
+    case 'doc-tab':activeDocTab=el.dataset.tab;if(m.rawStatus!=='ready'&&activeDocTab==='people'){openModal('Участники',renderPeople(m));break}refresh();break;
+    case 'toggle-task':expandedTasks.has(el.dataset.id)?expandedTasks.delete(el.dataset.id):expandedTasks.add(el.dataset.id);refresh();$(`.item-toggle[data-id="${CSS.escape(el.dataset.id)}"]`)?.focus({preventScroll:true});break;
+    case 'verify-text':{const item=el.dataset.kind==='summary'?m.summary:m.decisions.find(d=>d.id===el.dataset.id);if(item){item.verified=true;log(m,`${ME} подтвердила ${el.dataset.kind==='summary'?'краткое содержание':'решение'}.`);save();refresh();toast('Формулировка подтверждена.')}break}
+    case 'next-issue':{activeDocTab='protocol';const task=visibleTasks(m).find(t=>!t.verified);let target;if(task){expandedTasks.add(task.id);target='task-'+task.id}else if(!m.summary.verified)target='summaryBlock';else{const d=m.decisions.find(d=>!d.verified);target=d?'decision-'+d.id:null}refresh();if(target)$('#'+CSS.escape(target))?.scrollIntoView({block:'center',behavior:'smooth'});else toast('Все предложения проверены.');break}
+    case 'edit-text':editText(el.dataset.kind,el.dataset.id);break;
+    case 'edit-task':editTask(el.dataset.id);break;
+    case 'add-task':editTask();break;
+    case 'reject-task':{const t=m.tasks.find(t=>t.id===el.dataset.id);openModal('Отклонить поручение?',`<p class="modal-description">«${esc(t.title)}» будет исключено из протокола. Действие останется в локальной истории.</p>`,`${btn('Отмена','close-modal','','secondary')}${btn('Отклонить','confirm-reject','','primary',`data-id="${t.id}"`)}`);break}
+    case 'confirm-reject':{const t=m.tasks.find(t=>t.id===el.dataset.id);t.rejected=true;log(m,`${ME} отклонила поручение «${t.title}».`);save();closeModal();refresh();toast('Поручение исключено из протокола.');break}
+    case 'edit-person':editPerson(Number(el.dataset.index));break;
+    case 'edit-utterance':editUtterance(el.dataset.meeting,el.dataset.id);break;
+    case 'source':openSource(el.dataset.meeting,el.dataset.sourceIds.split(','),el);break;
+    case 'close-source':closeSource();break;
+    case 'full-transcript':fullTranscript();break;
+    case 'export':showExport();break;
+    case 'download-docx':{const draft=el.dataset.draft==='true';if(!draft&&pendingCount(m)){toast('Сначала подтвердите все предложения.','alert');break}const blob=docxBlob(m,draft,$('#exportSources').checked,$('#exportTranscript').checked);downloadBlob(blob,`${draft?'Черновик — ':''}${m.title.replace(/[\\/:*?"<>|]/g,'-').slice(0,100)}.docx`);log(m,`Сформирован ${draft?'черновик':'проверенный протокол'} DOCX.`);save();closeModal();toast('Документ DOCX сформирован.');break}
+    case 'backup':downloadBlob(new Blob([JSON.stringify(state,null,2)],{type:'application/json'}),'taldauai-data.json');toast('Создана копия данных. Аудиофайлы в неё не входят.');break;
+    case 'meeting-filter':meetingFilter=el.dataset.filter;refresh();break;
+    case 'sort-meetings':sortAsc=!sortAsc;refresh();break;
+    case 'reset-meeting-filters':meetingQuery='';meetingFilter='all';refresh();break;
+    case 'task-filter':taskFilter=el.dataset.filter;refresh();break;
+    case 'toggle-task-filters':filterPanel=!filterPanel;refresh();break;
+    case 'reset-task-filters':taskQuery='';taskOwner='';taskMeeting='';refresh();break;
+    case 'open-task':activeDocTab='protocol';expandedTasks.add(el.dataset.id);nav('meeting/'+el.dataset.meeting);setTimeout(()=>$('#task-'+CSS.escape(el.dataset.id))?.scrollIntoView({block:'center',behavior:'smooth'}),100);break;
+    case 'reminder':reminder(el.dataset.meeting,el.dataset.id);break;
+    case 'copy-reminder':{const text=$('#reminderText').value;try{await navigator.clipboard.writeText(text);toast('Текст скопирован. Напоминание не отправлено.')}catch(e){$('#reminderText').select();const ok=document.execCommand('copy');toast(ok?'Текст скопирован. Напоминание не отправлено.':'Выделен текст. Скопируйте его сочетанием Ctrl+C.',ok?'check':'alert')}break}
+    case 'upload-tab':if(mediaRecorder?.state==='recording'){toast('Сначала остановите запись.','alert');break}captureNewDraft();formMode=el.dataset.mode;refresh();break;
+    case 'choose-file':$('#fileInput')?.click();break;
+    case 'remove-file':selectedFile=null;updateFileUI();if($('#fileInput'))$('#fileInput').value='';break;
+    case 'download-audio':if(selectedFile)downloadBlob(selectedFile,selectedFile.name);break;
+    case 'record':await toggleRecord();break;
+    case 'start-demo':startDemo();break;
+    case 'run-demo':runDemo();break;
+    case 'attach-audio':$('#attachmentInput').dataset.meeting=el.dataset.meeting;$('#attachmentInput').click();break;
+    case 'seek-audio':{const a=$(`audio[data-meeting="${CSS.escape(el.dataset.meeting)}"]`);if(!a){toast('В примере нет аудио. Прикрепите запись для прослушивания.','alert');break}try{a.currentTime=Number(el.dataset.at);await a.play()}catch(e){toast('Не удалось воспроизвести запись. Проверьте аудиофайл.','alert')}break}
+    case 'confirm-reset':openModal('Восстановить демонстрационные данные?',`<p class="modal-description">Все ваши изменения и добавленные совещания в этом прототипе будут удалены из браузера. Предварительно сохраните копию данных в JSON.</p>`,`${btn('Отмена','close-modal','','secondary')}${btn('Восстановить пример','reset','','primary')}`);break;
+    case 'reset':audioFiles.forEach(a=>URL.revokeObjectURL(a.url));audioFiles.clear();state=clone(seed);save();closeModal();activeDocTab='protocol';expandedTasks=new Set(['t1']);meetingQuery='';taskQuery='';taskFilter='active';meetingFilter='all';taskOwner='';taskMeeting='';nav('meeting/m1');toast('Демонстрационные данные восстановлены.');break;
+  }
+});
+document.addEventListener('submit',event=>{
+  const form=event.target.closest('form[data-form]');if(!form)return;event.preventDefault();const data=Object.fromEntries(new FormData(form));const m=meeting(form.dataset.meeting||route.id);
+  switch(form.dataset.form){
+    case 'new-meeting':createMeeting(form);break;
+    case 'inline-task':{const t=m.tasks.find(t=>t.id===form.dataset.id);if(!t)return;const verify=event.submitter?.value==='verify',noDue=form.elements.noDue.checked;const owner=(data.owner||'').trim();if(verify&&!owner){form.elements.owner.setCustomValidity('Укажите ответственного.');form.elements.owner.reportValidity();return}if(verify&&!data.due&&!noDue){form.elements.due.setCustomValidity('Укажите дату или отметьте, что срок не установлен.');form.elements.due.reportValidity();return}const before=`${t.owner||'не определён'}, ${t.due||'без даты'}`;t.owner=owner;t.due=noDue?'':data.due||'';t.noDue=noDue;t.verified=verify;t.reviewer=verify?ME:'';t.reason=verify?'':'Изменено пользователем. Требуется подтверждение.';log(m,`${ME} ${verify?'подтвердила':'сохранила черновик поручения'} «${t.title}». ${before} → ${t.owner||'не определён'}, ${t.due||'без даты'}.`);if(verify)expandedTasks.delete(t.id);save();refresh();toast(verify?'Поручение подтверждено. Оно доступно в разделе «В работе».':'Черновик поручения сохранён.');break}
+    case 'text-edit':{const item=form.dataset.kind==='summary'?m.summary:m.decisions.find(d=>d.id===form.dataset.id);if(!data.text.trim()){form.elements.text.setCustomValidity('Введите формулировку.');form.elements.text.reportValidity();return}item.text=data.text.trim();item.verified=!!data.verified;log(m,`${ME} изменила ${form.dataset.kind==='summary'?'краткое содержание':'решение'}${item.verified?' и подтвердила текст':'. Требуется проверка'}.`);save();closeModal();refresh();toast('Текст сохранён.');break}
+    case 'task-edit':{if(!data.title.trim()){form.elements.title.setCustomValidity('Введите формулировку.');form.elements.title.reportValidity();return}const existing=form.dataset.id?m.tasks.find(t=>t.id===form.dataset.id):null;const source=data.source?(existing?.source?.[0]===data.source?existing.source:[data.source]):[];const props={title:data.title.trim(),owner:data.owner||'',due:data.due||'',noDue:false,verified:false,source,manualReason:data.manualReason.trim(),reason:'Формулировка изменена пользователем. Проверьте исполнителя и срок.'};if(existing)Object.assign(existing,props);else m.tasks.push({...props,id:uid('task'),done:false,origin:'manual'});log(m,`${ME} ${existing?'изменила':'добавила'} поручение «${props.title}». Требуется проверка.`);save();closeModal();refresh();toast('Поручение сохранено как черновик.');break}
+    case 'person':{const person=m.people[Number(form.dataset.index)];const old=person.name,name=data.name.trim();if(!name){form.elements.name.setCustomValidity('Введите имя.');form.elements.name.reportValidity();return}if(m.people.some(p=>p!==person&&p.name===name)){form.elements.name.setCustomValidity('Участник с этим именем уже есть.');form.elements.name.reportValidity();return}person.name=name;person.role=data.role.trim();if(old!==name){m.transcript.forEach(s=>{if(s.speaker===old)s.speaker=name});m.tasks.forEach(t=>{if(t.owner===old){t.owner=name;t.verified=false;t.reason='Имя участника изменено. Подтвердите исполнителя повторно.'}})}log(m,`${ME} изменила участника: ${old} → ${name}.`);save();closeModal();refresh();if(sourceState)renderSource();toast('Данные участника обновлены.');break}
+    case 'utterance':{const s=m.transcript.find(s=>s.id===form.dataset.id);if(!data.text.trim()){form.elements.text.setCustomValidity('Введите текст реплики.');form.elements.text.reportValidity();return}const old=s.text;s.text=data.text.trim();s.speaker=data.speaker;s.lang=data.lang;m.tasks.forEach(t=>{if(t.source.includes(s.id)){t.verified=false;t.reason='Исходная реплика изменена. Проверьте поручение повторно.'}});m.decisions.forEach(d=>{if(d.source.includes(s.id))d.verified=false});if(m.summary.source.includes(s.id))m.summary.verified=false;log(m,`${ME} исправила реплику ${timeLabel(s.at)}: «${old}» → «${s.text}».`);save();closeModal();refresh();if(sourceState)renderSource();toast('Реплика обновлена. Связанные предложения требуют проверки.');break}
+    case 'rename':if(!data.title.trim()){form.elements.title.setCustomValidity('Введите название.');form.elements.title.reportValidity();return}log(m,`${ME} переименовала совещание: «${m.title}» → «${data.title.trim()}».`);m.title=data.title.trim();save();closeModal();refresh();break;
+  }
+});
+document.addEventListener('input',event=>{
+  const el=event.target;if(el.setCustomValidity)el.setCustomValidity('');
+  if(el.id==='meetingQuery'){meetingQuery=el.value;$('#meetingTable').innerHTML=meetingTable()}
+  if(el.id==='taskQuery'){taskQuery=el.value;$('#taskTable').innerHTML=taskTable()}
+  if(el.id==='globalSearch')updateSearch(el.value);
+  if(el.id==='transcriptQuery'){const m=meeting(),q=el.value.trim();const rows=m.transcript.filter(s=>(s.text+' '+s.speaker).toLowerCase().includes(q.toLowerCase()));$('#transcriptList').innerHTML=rows.map(s=>utterance(m,s,false,q)).join('')||'<div class="empty-state"><p>Совпадений нет. Попробуйте другой запрос.</p></div>';$('#transcriptCount').textContent=`${rows.length} из ${m.transcript.length} реплик`}
+  if(el.closest('#newMeetingForm'))captureNewDraft();
+});
+document.addEventListener('change',event=>{
+  const el=event.target;if(el.setCustomValidity)el.setCustomValidity('');
+  if(el.id==='fileInput'&&el.files?.[0])chooseAudio(el.files[0]);
+  if(el.id==='consent')captureNewDraft();
+  if(el.name==='noDue'){const input=el.closest('form').elements.due;input.disabled=el.checked;input.setCustomValidity('')}
+  if(el.id==='taskOwner'){taskOwner=el.value;$('#taskTable').innerHTML=taskTable()}
+  if(el.id==='taskMeeting'){taskMeeting=el.value;$('#taskTable').innerHTML=taskTable()}
+  if(el.id==='wideSetting'||el.id==='compactSetting'){state.settings[el.id==='wideSetting'?'wide':'compact']=el.checked;save();refresh()}
+  if(el.matches('.completion-box')){const m=meeting(el.dataset.meeting),t=m?.tasks.find(t=>t.id===el.dataset.task);if(!t||!t.verified)return;t.done=el.checked;log(m,`${ME} ${t.done?'отметила выполнение':'вернула в работу'} поручения «${t.title}».`);save();refresh();toast(t.done?'Поручение перемещено во вкладку «Выполнены».':'Поручение возвращено в работу.')}
+  if(el.id==='attachmentInput'&&el.files?.[0]){const file=el.files[0],error=validateFile(file);if(error){toast(error,'alert');el.value='';return}const m=meeting(el.dataset.meeting);if(!m)return;const prev=audioFiles.get(m.id);if(prev)URL.revokeObjectURL(prev.url);audioFiles.set(m.id,{url:URL.createObjectURL(file),name:file.name});log(m,'Аудиофайл прикреплён локально. Синхронизация с текстом не проверялась.');save();refresh();if(sourceState)renderSource();el.value='';toast('Аудио прикреплено к текущей вкладке.')}
+});
+['dragenter','dragover'].forEach(type=>document.addEventListener(type,e=>{const zone=e.target.closest('#dropzone');if(zone){e.preventDefault();zone.classList.add('dragging')}}));
+document.addEventListener('dragleave',e=>{const zone=e.target.closest('#dropzone');if(zone&&!zone.contains(e.relatedTarget))zone.classList.remove('dragging')});
+document.addEventListener('drop',e=>{const zone=e.target.closest('#dropzone');if(zone){e.preventDefault();zone.classList.remove('dragging');if(e.dataTransfer.files.length)chooseAudio(e.dataTransfer.files[0])}});
+let previewTimer;
+document.addEventListener('mouseover',e=>{const b=e.target.closest('[data-source-ids]');if(b){clearTimeout(previewTimer);previewTimer=setTimeout(()=>showCitationPreview(b),280)}});
+document.addEventListener('mouseout',e=>{if(e.target.closest('[data-source-ids]')){clearTimeout(previewTimer);$('#citationPreview').hidden=true}});
+document.addEventListener('focusin',e=>{const b=e.target.closest('[data-source-ids]');if(b)showCitationPreview(b)});
+document.addEventListener('focusout',e=>{if(e.target.closest('[data-source-ids]'))$('#citationPreview').hidden=true});
+document.addEventListener('keydown',event=>{
+  if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='k'){event.preventDefault();openSearch();return}
+  if((event.ctrlKey||event.metaKey)&&event.key==='\\'){event.preventDefault();toggleSidebar();return}
+  if(event.key==='Escape'&&!$('#modal').open){closeSource();closeSidebar();if($('#pageMenu'))$('#pageMenu').hidden=true;$('#citationPreview').hidden=true}
+  if(event.key==='Tab'&&sourceState&&innerWidth<=760&&!$('#modal').open){const focusable=$$('button,input,select,textarea,a[href]', $('#sourcePanel')).filter(el=>!el.disabled&&!el.hidden);const first=focusable[0],last=focusable[focusable.length-1];if(event.shiftKey&&document.activeElement===first){event.preventDefault();last?.focus()}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first?.focus()}}
+  if(['ArrowLeft','ArrowRight'].includes(event.key)&&event.target.matches('[role="tab"]')){const tabs=$$('[role="tab"]',event.target.closest('[role="tablist"]')),current=tabs.indexOf(event.target),next=tabs[(current+(event.key==='ArrowRight'?1:-1)+tabs.length)%tabs.length];event.preventDefault();const ds={...next.dataset};next.click();const selector=`[data-action="${ds.action}"]${ds.tab?`[data-tab="${ds.tab}"]`:ds.filter?`[data-filter="${ds.filter}"]`:''}`;$(selector)?.focus()}
+});
+$('#sidebarScrim').addEventListener('click',closeSidebar);
+$('#modal').addEventListener('click',event=>{if(event.target===$('#modal')){const r=$('#modal').getBoundingClientRect();if(event.clientX<r.left||event.clientX>r.right||event.clientY<r.top||event.clientY>r.bottom)closeModal()}});
+window.addEventListener('hashchange',()=>{parseRoute();closeSource();if(route.id!=='m4'){clearInterval(processTimer);processTimer=null}render();window.scrollTo({top:0,behavior:'instant'})});
+window.addEventListener('beforeunload',event=>{if(mediaRecorder?.state==='recording'){event.preventDefault();event.returnValue=''}});
+window.addEventListener('pagehide',()=>{mediaStream?.getTracks().forEach(t=>t.stop());audioFiles.forEach(a=>URL.revokeObjectURL(a.url))});
+parseRoute();applySettings();render();
+</script>
+</body>
+</html>

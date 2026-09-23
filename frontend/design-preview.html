@@ -1,0 +1,1641 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TaldauAI — протоколы совещаний</title>
+  <style>
+    :root{
+      --bg:#f6f7f5;
+      --surface:#ffffff;
+      --surface-2:#f9faf8;
+      --surface-3:#f2f4f1;
+      --text:#1f2421;
+      --muted:#70766f;
+      --muted-2:#969c95;
+      --line:#e3e7e1;
+      --line-strong:#d5dad3;
+      --accent:#1f6f68;
+      --accent-2:#155b55;
+      --accent-soft:#eaf4f1;
+      --warning:#9c6c17;
+      --warning-soft:#fff6dd;
+      --danger:#b1453c;
+      --danger-soft:#fff0ee;
+      --success:#3f7357;
+      --success-soft:#edf7f0;
+      --shadow:0 10px 30px rgba(31,36,33,.07);
+      --radius:10px;
+      --radius-sm:8px;
+      --sidebar:228px;
+      --topbar:72px;
+      --font:Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{
+      margin:0;
+      font-family:var(--font);
+      background:var(--bg);
+      color:var(--text);
+      min-height:100vh;
+    }
+    button,input,textarea,select{font:inherit}
+    button{cursor:pointer}
+    a{color:inherit}
+
+    .app{
+      min-height:100vh;
+      display:grid;
+      grid-template-columns:var(--sidebar) minmax(0,1fr);
+    }
+
+    .sidebar{
+      position:sticky;
+      top:0;
+      height:100vh;
+      background:#fbfcfa;
+      border-right:1px solid var(--line);
+      padding:20px 14px 16px;
+      display:flex;
+      flex-direction:column;
+      z-index:50;
+    }
+    .brand{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding:0 10px 22px;
+      font-size:17px;
+      font-weight:700;
+      letter-spacing:-.02em;
+    }
+    .brand-mark{
+      width:30px;height:30px;border-radius:8px;
+      display:grid;place-items:center;
+      background:var(--text); color:white;
+      font-size:14px;font-weight:800;
+    }
+
+    .nav-label{
+      padding:0 10px 8px;
+      font-size:11px;
+      text-transform:uppercase;
+      color:var(--muted-2);
+      letter-spacing:.08em;
+      font-weight:700;
+    }
+    .nav{
+      display:flex;
+      flex-direction:column;
+      gap:4px;
+    }
+    .nav-btn{
+      width:100%;
+      border:0;
+      background:transparent;
+      color:var(--muted);
+      border-radius:8px;
+      padding:10px 10px;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      text-align:left;
+      font-size:14px;
+      font-weight:560;
+      transition:.18s ease;
+    }
+    .nav-btn:hover{background:var(--surface-3);color:var(--text)}
+    .nav-btn.active{
+      color:var(--text);
+      background:#eef2ee;
+    }
+    .nav-icon{
+      width:18px;text-align:center;
+      color:var(--muted);
+      font-size:15px;
+    }
+    .nav-count{
+      margin-left:auto;
+      color:var(--muted);
+      background:#e7ebe6;
+      border-radius:999px;
+      font-size:11px;
+      line-height:20px;
+      min-width:20px;
+      padding:0 6px;
+      text-align:center;
+    }
+    .sidebar-spacer{flex:1}
+    .profile{
+      border-top:1px solid var(--line);
+      padding:14px 6px 0;
+      display:flex;
+      gap:10px;
+      align-items:center;
+    }
+    .avatar{
+      width:32px;height:32px;border-radius:50%;
+      background:#e6ebe6;
+      display:grid;place-items:center;
+      font-size:12px;font-weight:700;
+    }
+    .profile-name{font-size:13px;font-weight:650}
+    .profile-role{font-size:11px;color:var(--muted);margin-top:2px}
+
+    .main{
+      min-width:0;
+      display:flex;
+      flex-direction:column;
+    }
+    .topbar{
+      height:var(--topbar);
+      position:sticky;
+      top:0;
+      z-index:40;
+      background:rgba(246,247,245,.86);
+      backdrop-filter:blur(14px);
+      border-bottom:1px solid rgba(227,231,225,.9);
+      display:flex;
+      align-items:center;
+      padding:0 28px;
+      gap:18px;
+    }
+    .mobile-menu{display:none}
+    .topbar-title{
+      font-size:14px;font-weight:650;
+      color:var(--muted);
+    }
+    .topbar-actions{
+      margin-left:auto;
+      display:flex;align-items:center;gap:8px;
+    }
+    .icon-btn,.ghost-btn,.primary-btn,.secondary-btn,.danger-btn{
+      border:1px solid var(--line-strong);
+      border-radius:8px;
+      background:var(--surface);
+      color:var(--text);
+      min-height:36px;
+      padding:0 12px;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:8px;
+      font-size:13px;
+      font-weight:620;
+      transition:.18s ease;
+    }
+    .icon-btn{width:36px;padding:0}
+    .ghost-btn:hover,.icon-btn:hover,.secondary-btn:hover{background:var(--surface-3)}
+    .primary-btn{
+      border-color:var(--accent);
+      background:var(--accent);
+      color:#fff;
+    }
+    .primary-btn:hover{background:var(--accent-2)}
+    .secondary-btn{background:var(--surface)}
+    .danger-btn{
+      border-color:#ebc7c2;
+      color:var(--danger);
+      background:var(--danger-soft);
+    }
+
+    .page{
+      width:100%;
+      max-width:1480px;
+      margin:0 auto;
+      padding:30px 34px 48px;
+    }
+    .view{display:none}
+    .view.active{display:block}
+    .page-heading{
+      display:flex;
+      gap:20px;
+      align-items:flex-start;
+      justify-content:space-between;
+      margin-bottom:24px;
+    }
+    .page-title{
+      margin:0;
+      font-size:30px;
+      line-height:1.15;
+      letter-spacing:-.035em;
+      font-weight:730;
+    }
+    .page-subtitle{
+      color:var(--muted);
+      font-size:14px;
+      line-height:1.6;
+      max-width:690px;
+      margin-top:8px;
+    }
+
+    .segmented{
+      display:inline-flex;
+      background:#e9ede8;
+      border-radius:8px;
+      padding:3px;
+      gap:2px;
+    }
+    .segment{
+      border:0;background:transparent;
+      border-radius:6px;
+      padding:7px 11px;
+      color:var(--muted);
+      font-size:12px;font-weight:650;
+    }
+    .segment.active{background:#fff;color:var(--text);box-shadow:0 1px 2px rgba(20,30,25,.06)}
+
+    .filters{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      margin-bottom:14px;
+      flex-wrap:wrap;
+    }
+    .search{
+      position:relative;
+      min-width:260px;
+      flex:1;
+      max-width:420px;
+    }
+    .search input{
+      width:100%;
+      height:38px;
+      border:1px solid var(--line-strong);
+      border-radius:8px;
+      background:#fff;
+      padding:0 12px 0 36px;
+      outline:none;
+      color:var(--text);
+    }
+    .search input:focus{border-color:#aabeb8;box-shadow:0 0 0 3px rgba(31,111,104,.08)}
+    .search::before{
+      content:"⌕";
+      position:absolute;
+      left:12px;top:8px;
+      color:var(--muted);
+    }
+
+    .table-card{
+      background:var(--surface);
+      border:1px solid var(--line);
+      border-radius:var(--radius);
+      overflow:hidden;
+    }
+    table{
+      width:100%;
+      border-collapse:collapse;
+      font-size:13px;
+    }
+    thead th{
+      text-align:left;
+      color:var(--muted);
+      font-size:11px;
+      text-transform:uppercase;
+      letter-spacing:.04em;
+      padding:12px 16px;
+      background:#fafbfa;
+      border-bottom:1px solid var(--line);
+      font-weight:700;
+    }
+    tbody td{
+      padding:15px 16px;
+      border-bottom:1px solid var(--line);
+      vertical-align:middle;
+    }
+    tbody tr:last-child td{border-bottom:0}
+    tbody tr{transition:.14s ease}
+    tbody tr:hover{background:#fafbf9}
+    .row-title{font-weight:650;line-height:1.35}
+    .row-meta{color:var(--muted);font-size:12px;margin-top:4px}
+    .people{
+      display:flex;align-items:center;
+    }
+    .people span{
+      width:26px;height:26px;border-radius:50%;
+      background:#edf0ec;border:2px solid #fff;
+      display:grid;place-items:center;
+      font-size:9px;font-weight:700;
+      margin-left:-6px;
+    }
+    .people span:first-child{margin-left:0}
+    .people-more{color:var(--muted)}
+    .status{
+      display:inline-flex;align-items:center;gap:7px;
+      font-size:12px;
+      font-weight:630;
+      white-space:nowrap;
+    }
+    .status-dot{width:7px;height:7px;border-radius:50%;background:var(--muted-2)}
+    .status.warn .status-dot{background:#d29a2e}
+    .status.ok .status-dot{background:#6a8f77}
+    .status.processing .status-dot{background:#617d9d;box-shadow:0 0 0 3px #e8eef4}
+    .status.danger .status-dot{background:#c95c52}
+    .empty{
+      padding:70px 24px;
+      text-align:center;
+      color:var(--muted);
+    }
+    .empty h3{margin:0 0 8px;color:var(--text);font-size:17px}
+    .empty p{margin:0 auto 20px;max-width:410px;font-size:13px;line-height:1.6}
+
+    /* NEW MEETING */
+    .composer{
+      max-width:860px;
+      background:var(--surface);
+      border:1px solid var(--line);
+      border-radius:var(--radius);
+      padding:24px;
+    }
+    .form-grid{
+      display:grid;
+      grid-template-columns:1fr 220px;
+      gap:14px;
+      margin-bottom:22px;
+    }
+    .field label{
+      display:block;
+      font-size:12px;
+      font-weight:680;
+      margin-bottom:7px;
+    }
+    .field input,.field select,.field textarea{
+      width:100%;
+      min-height:40px;
+      border:1px solid var(--line-strong);
+      border-radius:8px;
+      background:#fff;
+      padding:9px 11px;
+      outline:none;
+      color:var(--text);
+    }
+    .field textarea{min-height:86px;resize:vertical}
+    .field input:focus,.field select:focus,.field textarea:focus{
+      border-color:#a9bdb7;
+      box-shadow:0 0 0 3px rgba(31,111,104,.07);
+    }
+
+    .upload-tabs{
+      display:flex;gap:18px;
+      border-bottom:1px solid var(--line);
+      margin:0 -24px 18px;
+      padding:0 24px;
+    }
+    .upload-tab{
+      padding:0 2px 12px;
+      background:none;border:0;
+      color:var(--muted);
+      font-size:13px;font-weight:650;
+      position:relative;
+    }
+    .upload-tab.active{color:var(--text)}
+    .upload-tab.active::after{
+      content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--accent);
+    }
+    .upload-pane{display:none}
+    .upload-pane.active{display:block}
+    .dropzone{
+      min-height:220px;
+      border:1px dashed #bfc7bf;
+      border-radius:10px;
+      background:#fafbf9;
+      display:flex;flex-direction:column;
+      align-items:center;justify-content:center;
+      text-align:center;padding:30px;
+      transition:.18s ease;
+    }
+    .dropzone.drag{background:var(--accent-soft);border-color:#8db7ae}
+    .drop-icon{
+      width:44px;height:44px;border-radius:10px;background:#eef2ee;
+      display:grid;place-items:center;margin-bottom:14px;font-size:18px
+    }
+    .dropzone h3{margin:0 0 7px;font-size:16px}
+    .dropzone p{margin:0 0 16px;font-size:12px;color:var(--muted)}
+    .upload-file{
+      display:none;
+      border:1px solid var(--line);
+      background:#fff;
+      border-radius:8px;
+      padding:12px 14px;
+      margin-top:12px;
+      align-items:center;
+      gap:12px;
+    }
+    .upload-file.show{display:flex}
+    .file-icon{
+      width:34px;height:34px;border-radius:7px;background:#eef2ee;display:grid;place-items:center
+    }
+    .file-main{flex:1}
+    .file-name{font-size:13px;font-weight:650}
+    .file-meta{font-size:11px;color:var(--muted);margin-top:3px}
+    .record-box{
+      min-height:220px;
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      border:1px solid var(--line);
+      background:#fafbf9;border-radius:10px;
+      text-align:center;
+    }
+    .record-button{
+      width:70px;height:70px;border-radius:50%;
+      border:7px solid #eef0ed;background:#d25c50;
+      box-shadow:inset 0 0 0 1px rgba(0,0,0,.05);
+      margin-bottom:16px;
+    }
+    .record-button.recording{animation:pulse 1.6s infinite}
+    @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(210,92,80,.2)}70%{box-shadow:0 0 0 15px rgba(210,92,80,0)}100%{box-shadow:0 0 0 0 rgba(210,92,80,0)}}
+    .processing-card{
+      margin-top:20px;
+      border:1px solid var(--line);
+      background:#fff;
+      border-radius:10px;
+      padding:18px;
+      display:none;
+    }
+    .processing-card.show{display:block}
+    .processing-head{
+      display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:14px
+    }
+    .steps{display:grid;gap:8px}
+    .step{display:flex;align-items:center;gap:9px;font-size:12px;color:var(--muted)}
+    .step.done{color:var(--text)}
+    .step.active{color:var(--text);font-weight:650}
+    .step-icon{width:18px;text-align:center}
+    .progress{
+      height:4px;border-radius:999px;background:#edf0ed;overflow:hidden;margin:16px 0 4px
+    }
+    .progress span{display:block;height:100%;width:54%;background:var(--accent);border-radius:inherit}
+
+    /* MEETING */
+    .meeting-head{
+      display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:18px
+    }
+    .back-link{
+      border:0;background:transparent;padding:0;margin-bottom:10px;
+      color:var(--muted);font-size:12px;font-weight:650;
+    }
+    .meeting-title{margin:0;font-size:26px;letter-spacing:-.03em}
+    .meeting-meta{margin-top:8px;color:var(--muted);font-size:13px;display:flex;gap:12px;flex-wrap:wrap}
+    .meeting-actions{display:flex;gap:8px;flex-wrap:wrap}
+
+    .review-banner{
+      border:1px solid #ead9b2;
+      background:#fff9e9;
+      border-radius:9px;
+      padding:12px 14px;
+      margin-bottom:14px;
+      display:flex;align-items:center;gap:11px;
+      font-size:12px;
+    }
+    .review-banner strong{font-weight:720}
+    .review-banner .secondary-btn{margin-left:auto;min-height:32px}
+
+    .workspace{
+      display:grid;
+      grid-template-columns:minmax(0,1.34fr) minmax(360px,.86fr);
+      background:var(--surface);
+      border:1px solid var(--line);
+      border-radius:10px;
+      overflow:hidden;
+      min-height:720px;
+    }
+    .transcript-pane{
+      min-width:0;
+      border-right:1px solid var(--line);
+      display:flex;flex-direction:column;
+    }
+    .protocol-pane{
+      min-width:0;
+      display:flex;flex-direction:column;
+      background:#fcfdfb;
+    }
+    .pane-head{
+      height:56px;
+      display:flex;align-items:center;
+      gap:10px;
+      border-bottom:1px solid var(--line);
+      padding:0 16px;
+      background:rgba(255,255,255,.84);
+      position:sticky;top:var(--topbar);z-index:5;
+    }
+    .pane-title{font-size:12px;font-weight:750;text-transform:uppercase;letter-spacing:.06em}
+    .pane-head .search{min-width:150px;max-width:none;margin-left:auto;flex:0 1 240px}
+    .pane-head .search input{height:34px;font-size:12px}
+    .transcript-list{
+      padding:18px 18px 60px;
+      overflow:auto;
+      max-height:calc(100vh - 190px);
+    }
+    .utterance{
+      display:grid;
+      grid-template-columns:52px minmax(0,1fr);
+      gap:12px;
+      padding:13px 10px;
+      border-radius:8px;
+      transition:.18s ease;
+      scroll-margin-top:140px;
+    }
+    .utterance + .utterance{margin-top:2px}
+    .utterance:hover{background:#f7f8f6}
+    .utterance.highlight{
+      background:#eef6f3;
+      box-shadow:inset 3px 0 0 var(--accent);
+    }
+    .time{font-size:11px;color:var(--muted);padding-top:2px}
+    .speaker-row{
+      display:flex;align-items:center;gap:7px;margin-bottom:6px;
+      font-size:12px;
+    }
+    .speaker{font-weight:720}
+    .lang{
+      margin-left:auto;
+      font-size:10px;
+      color:var(--muted);
+      border:1px solid var(--line);
+      border-radius:5px;
+      padding:2px 5px;
+      background:#fff;
+    }
+    .confidence{
+      font-size:10px;
+      color:var(--warning);
+      background:var(--warning-soft);
+      border-radius:5px;
+      padding:2px 5px;
+    }
+    .utterance p{
+      margin:0;
+      font-size:14px;
+      line-height:1.66;
+      color:#313632;
+    }
+    .uncertain{
+      background:linear-gradient(transparent 68%, #fff0bd 68%);
+      border-bottom:1px dotted #b8831d;
+      cursor:pointer;
+    }
+    .audio-inline{
+      display:none;
+      margin-top:8px;
+      align-items:center;gap:8px;
+      font-size:11px;color:var(--muted)
+    }
+    .utterance:hover .audio-inline{display:flex}
+    .mini-play{
+      width:24px;height:24px;border:1px solid var(--line-strong);
+      border-radius:50%;background:#fff;
+    }
+
+    .protocol-tabs{
+      display:flex;
+      gap:16px;
+      padding:0 16px;
+      border-bottom:1px solid var(--line);
+      background:#fff;
+    }
+    .protocol-tab{
+      border:0;background:none;padding:13px 0 11px;
+      color:var(--muted);font-size:12px;font-weight:680;
+      position:relative;
+    }
+    .protocol-tab.active{color:var(--text)}
+    .protocol-tab.active::after{
+      content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--accent)
+    }
+    .protocol-content{
+      padding:16px;
+      overflow:auto;
+      max-height:calc(100vh - 245px);
+    }
+    .protocol-section{display:none}
+    .protocol-section.active{display:block}
+    .summary-block{
+      border-bottom:1px solid var(--line);
+      padding-bottom:16px;margin-bottom:16px;
+    }
+    .section-eyebrow{
+      font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted-2);font-weight:750;margin-bottom:8px
+    }
+    .summary-block textarea{
+      width:100%;border:0;background:transparent;resize:none;
+      min-height:130px;color:var(--text);
+      font-size:13px;line-height:1.65;outline:none;
+    }
+    .ai-note{
+      font-size:11px;color:var(--muted);display:flex;align-items:center;gap:6px;margin-top:8px
+    }
+    .ai-spark{color:var(--accent)}
+
+    .task-card{
+      border:1px solid var(--line);
+      background:#fff;
+      border-radius:9px;
+      padding:14px;
+      margin-bottom:10px;
+      transition:.18s ease;
+    }
+    .task-card:hover{border-color:#cfd6cf}
+    .task-card.selected{
+      border-color:#9fbcb5;
+      box-shadow:0 0 0 3px rgba(31,111,104,.07);
+    }
+    .task-top{display:flex;align-items:flex-start;gap:10px}
+    .task-number{
+      width:24px;height:24px;border-radius:6px;background:#eef2ee;
+      display:grid;place-items:center;font-size:10px;font-weight:750;color:var(--muted)
+    }
+    .task-main{flex:1;min-width:0}
+    .task-title-input{
+      width:100%;border:0;outline:0;background:transparent;
+      padding:1px 0;font-size:13px;font-weight:720;color:var(--text);
+    }
+    .task-state{
+      display:inline-flex;gap:6px;align-items:center;
+      font-size:10px;font-weight:680;
+      color:var(--warning);margin-top:4px;
+    }
+    .task-state.verified{color:var(--success)}
+    .task-grid{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:10px;margin-top:13px;
+    }
+    .mini-field label{
+      display:block;font-size:10px;color:var(--muted);margin-bottom:5px;font-weight:650
+    }
+    .mini-field input,.mini-field select{
+      width:100%;height:34px;border:1px solid var(--line);
+      border-radius:7px;background:#fbfcfa;padding:0 8px;font-size:11px;color:var(--text);outline:none
+    }
+    .evidence{
+      margin-top:12px;
+      border-top:1px solid var(--line);
+      padding-top:11px;
+    }
+    .evidence-link{
+      border:0;background:transparent;padding:0;color:var(--accent);
+      font-size:11px;font-weight:680;display:flex;align-items:center;gap:6px
+    }
+    .evidence-quote{
+      margin-top:8px;
+      color:#59605a;
+      font-size:11px;line-height:1.55;
+      border-left:2px solid #d6dfda;padding-left:9px;
+    }
+    .task-actions{
+      display:flex;gap:8px;margin-top:12px;
+    }
+    .task-actions .primary-btn,.task-actions .secondary-btn{min-height:32px;font-size:11px;padding:0 10px}
+    .add-task{
+      width:100%;height:38px;border:1px dashed #cdd3cc;background:#fafbf9;
+      border-radius:8px;color:var(--muted);font-size:12px;font-weight:650
+    }
+
+    .decision{
+      padding:12px 0;border-bottom:1px solid var(--line);font-size:13px;line-height:1.6
+    }
+    .decision:last-child{border-bottom:0}
+    .decision .meta{font-size:10px;color:var(--muted);margin-top:5px}
+
+    /* TASK CONTROL */
+    .task-toolbar{
+      display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px
+    }
+    .task-toolbar .search{max-width:390px}
+    .filter-btn{
+      height:36px;padding:0 10px;border:1px solid var(--line-strong);
+      background:#fff;border-radius:8px;color:var(--muted);font-size:12px;font-weight:640
+    }
+    .filter-btn.active{background:#eef2ee;color:var(--text)}
+    .checkbox{
+      width:16px;height:16px;accent-color:var(--accent)
+    }
+    .due-overdue{color:var(--danger);font-weight:650}
+    .due-soon{color:var(--warning);font-weight:650}
+    .done-row .row-title{text-decoration:line-through;color:var(--muted)}
+    .done-row{opacity:.78}
+
+    /* TOAST */
+    .toast{
+      position:fixed;right:24px;bottom:24px;
+      background:#202521;color:#fff;
+      border-radius:9px;padding:11px 14px;
+      font-size:12px;font-weight:650;
+      box-shadow:var(--shadow);
+      transform:translateY(20px);opacity:0;pointer-events:none;
+      transition:.22s ease;z-index:1000
+    }
+    .toast.show{transform:translateY(0);opacity:1}
+
+    /* MOBILE NAV */
+    .mobile-bottom{display:none}
+
+    @media (max-width:1100px){
+      :root{--sidebar:200px}
+      .workspace{grid-template-columns:minmax(0,1.15fr) minmax(340px,.85fr)}
+      .page{padding-left:24px;padding-right:24px}
+    }
+
+    @media (max-width:860px){
+      .app{display:block}
+      .sidebar{display:none}
+      .topbar{
+        height:58px;padding:0 14px;
+        background:rgba(246,247,245,.96)
+      }
+      .mobile-menu{display:inline-flex}
+      .topbar-title{font-size:13px}
+      .topbar-actions .secondary-btn{display:none}
+      .page{padding:20px 14px 88px}
+      .page-title{font-size:25px}
+      .page-heading{align-items:flex-start}
+      .page-heading .primary-btn{white-space:nowrap}
+      .hide-mobile{display:none!important}
+      .table-card{overflow:auto}
+      table{min-width:760px}
+      .form-grid{grid-template-columns:1fr}
+      .composer{padding:18px}
+      .upload-tabs{margin-left:-18px;margin-right:-18px;padding:0 18px}
+      .meeting-head{display:block}
+      .meeting-actions{margin-top:14px}
+      .review-banner{align-items:flex-start}
+      .review-banner .secondary-btn{display:none}
+
+      .workspace{
+        display:block;
+        min-height:0;
+        background:transparent;
+        border:0;
+        overflow:visible;
+      }
+      .transcript-pane,.protocol-pane{
+        border:1px solid var(--line);
+        border-radius:10px;
+        background:#fff;
+        overflow:hidden;
+      }
+      .transcript-pane{display:none}
+      .workspace.show-transcript .transcript-pane{display:flex}
+      .workspace.show-transcript .protocol-pane{display:none}
+      .workspace.show-protocol .transcript-pane{display:none}
+      .workspace.show-protocol .protocol-pane{display:flex}
+      .pane-head{top:58px}
+      .transcript-list,.protocol-content{max-height:none;overflow:visible}
+      .mobile-workspace-switch{
+        display:flex!important;
+        margin-bottom:10px;
+      }
+
+      .mobile-bottom{
+        position:fixed;display:grid;grid-template-columns:repeat(4,1fr);
+        left:0;right:0;bottom:0;z-index:60;
+        height:66px;background:rgba(252,253,251,.95);
+        backdrop-filter:blur(16px);
+        border-top:1px solid var(--line);
+        padding-bottom:env(safe-area-inset-bottom);
+      }
+      .mobile-bottom button{
+        border:0;background:transparent;color:var(--muted);font-size:10px;font-weight:650;
+        display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px
+      }
+      .mobile-bottom button.active{color:var(--accent)}
+      .mobile-bottom .micon{font-size:17px}
+      .toast{right:14px;left:14px;bottom:78px;text-align:center}
+    }
+
+    @media (min-width:861px){
+      .mobile-workspace-switch{display:none!important}
+    }
+
+    @media (max-width:520px){
+      .page-heading{display:block}
+      .page-heading .primary-btn{margin-top:16px}
+      .filters{display:grid;grid-template-columns:1fr 1fr}
+      .search{min-width:0;max-width:none;grid-column:1/-1}
+      .meeting-title{font-size:22px}
+      .meeting-actions .secondary-btn:nth-child(2){display:none}
+      .task-grid{grid-template-columns:1fr}
+      .review-banner{font-size:11px}
+      .pane-head .search{display:none}
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">T</div>
+      <span>TaldauAI</span>
+    </div>
+
+    <div class="nav-label">Рабочее место</div>
+    <nav class="nav">
+      <button class="nav-btn active" data-view="meetings">
+        <span class="nav-icon">▦</span>
+        <span>Совещания</span>
+      </button>
+      <button class="nav-btn" data-view="new">
+        <span class="nav-icon">＋</span>
+        <span>Новое совещание</span>
+      </button>
+      <button class="nav-btn" data-view="meeting">
+        <span class="nav-icon">▤</span>
+        <span>Карточка встречи</span>
+        <span class="nav-count">5</span>
+      </button>
+      <button class="nav-btn" data-view="tasks">
+        <span class="nav-icon">✓</span>
+        <span>Поручения</span>
+        <span class="nav-count">4</span>
+      </button>
+    </nav>
+
+    <div class="sidebar-spacer"></div>
+    <div class="nav-label">Система</div>
+    <nav class="nav">
+      <button class="nav-btn">
+        <span class="nav-icon">⚙</span>
+        <span>Настройки</span>
+      </button>
+      <button class="nav-btn">
+        <span class="nav-icon">RU</span>
+        <span>Русский</span>
+      </button>
+    </nav>
+
+    <div class="profile">
+      <div class="avatar">AK</div>
+      <div>
+        <div class="profile-name">Алия К.</div>
+        <div class="profile-role">Секретарь</div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <button class="icon-btn mobile-menu" aria-label="Меню">☰</button>
+      <div class="topbar-title" id="topbarTitle">Совещания</div>
+      <div class="topbar-actions">
+        <button class="secondary-btn">Помощь</button>
+        <button class="icon-btn" aria-label="Уведомления">◔</button>
+        <button class="primary-btn" data-view-target="new">+ Новое</button>
+      </div>
+    </header>
+
+    <!-- MEETINGS -->
+    <section class="page view active" id="view-meetings">
+      <div class="page-heading">
+        <div>
+          <h1 class="page-title">Совещания</h1>
+          <div class="page-subtitle">
+            Записи, которые уже обработаны или ещё требуют проверки перед экспортом протокола.
+          </div>
+        </div>
+        <button class="primary-btn" data-view-target="new">+ Новое совещание</button>
+      </div>
+
+      <div class="filters">
+        <div class="segmented">
+          <button class="segment active">Все 24</button>
+          <button class="segment">Требуют проверки 3</button>
+          <button class="segment">Готовы 17</button>
+        </div>
+        <div class="search">
+          <input type="search" placeholder="Поиск по совещаниям" />
+        </div>
+        <button class="secondary-btn">Дата ▾</button>
+      </div>
+
+      <div class="table-card">
+        <table>
+          <thead>
+            <tr>
+              <th>Совещание</th>
+              <th>Дата</th>
+              <th>Участники</th>
+              <th>Проверка</th>
+              <th>Поручения</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr data-open-meeting>
+              <td>
+                <div class="row-title">Еженедельное совещание руководства</div>
+                <div class="row-meta">1:16:24 · ru / kk</div>
+              </td>
+              <td>Сегодня, 10:00</td>
+              <td>
+                <div class="people">
+                  <span>АС</span><span>АК</span><span>МН</span><span class="people-more">+5</span>
+                </div>
+              </td>
+              <td><span class="status warn"><span class="status-dot"></span>5 мест проверить</span></td>
+              <td>7</td>
+              <td>›</td>
+            </tr>
+            <tr>
+              <td>
+                <div class="row-title">Бюджет 2027</div>
+                <div class="row-meta">42:08 · ru</div>
+              </td>
+              <td>Вчера, 15:30</td>
+              <td><div class="people"><span>АК</span><span>ДС</span><span class="people-more">+3</span></div></td>
+              <td><span class="status ok"><span class="status-dot"></span>Проверено</span></td>
+              <td>4</td>
+              <td>›</td>
+            </tr>
+            <tr>
+              <td>
+                <div class="row-title">Статус цифровизации</div>
+                <div class="row-meta">58:11 · ru / kk</div>
+              </td>
+              <td>20 сен, 11:00</td>
+              <td><div class="people"><span>МН</span><span>АС</span><span class="people-more">+10</span></div></td>
+              <td><span class="status processing"><span class="status-dot"></span>Обработка</span></td>
+              <td>—</td>
+              <td>›</td>
+            </tr>
+            <tr>
+              <td>
+                <div class="row-title">Рабочая группа по закупкам</div>
+                <div class="row-meta">35:46 · kk</div>
+              </td>
+              <td>18 сен, 09:15</td>
+              <td><div class="people"><span>КМ</span><span>АС</span><span class="people-more">+6</span></div></td>
+              <td><span class="status ok"><span class="status-dot"></span>Проверено</span></td>
+              <td>3</td>
+              <td>›</td>
+            </tr>
+            <tr>
+              <td>
+                <div class="row-title">Совещание по объектам</div>
+                <div class="row-meta">1:03:50 · ru</div>
+              </td>
+              <td>16 сен, 14:00</td>
+              <td><div class="people"><span>ДС</span><span>ТЖ</span><span class="people-more">+8</span></div></td>
+              <td><span class="status danger"><span class="status-dot"></span>Ошибка файла</span></td>
+              <td>—</td>
+              <td>›</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- NEW MEETING -->
+    <section class="page view" id="view-new">
+      <div class="page-heading">
+        <div>
+          <h1 class="page-title">Новое совещание</h1>
+          <div class="page-subtitle">
+            Загрузите запись или начните запись с микрофона. После обработки система подготовит черновик протокола для проверки.
+          </div>
+        </div>
+      </div>
+
+      <div class="composer">
+        <div class="form-grid">
+          <div class="field">
+            <label>Название совещания</label>
+            <input value="Еженедельное совещание руководства" />
+          </div>
+          <div class="field">
+            <label>Дата</label>
+            <input type="date" value="2026-09-23" />
+          </div>
+        </div>
+
+        <div class="upload-tabs">
+          <button class="upload-tab active" data-upload-tab="file">Загрузить запись</button>
+          <button class="upload-tab" data-upload-tab="record">Записать с микрофона</button>
+        </div>
+
+        <div class="upload-pane active" id="upload-file-pane">
+          <div class="dropzone" id="dropzone">
+            <div class="drop-icon">↑</div>
+            <h3>Перетащите аудиофайл сюда</h3>
+            <p>MP3, M4A, WAV, MP4 · до 2 ГБ</p>
+            <button class="secondary-btn" id="chooseFile">Выбрать файл</button>
+            <input type="file" id="fileInput" accept="audio/*,video/*" hidden />
+          </div>
+
+          <div class="upload-file" id="uploadFilePreview">
+            <div class="file-icon">♪</div>
+            <div class="file-main">
+              <div class="file-name" id="fileName">meeting_23_09.m4a</div>
+              <div class="file-meta">1:16:24 · 84,2 МБ</div>
+            </div>
+            <button class="icon-btn" id="removeFile" aria-label="Удалить">×</button>
+          </div>
+        </div>
+
+        <div class="upload-pane" id="upload-record-pane">
+          <div class="record-box">
+            <button class="record-button" id="recordButton" aria-label="Начать запись"></button>
+            <strong id="recordTitle">Начать запись</strong>
+            <div class="page-subtitle" style="margin-top:5px">Микрофон устройства · 00:00</div>
+          </div>
+        </div>
+
+        <div class="field" style="margin-top:18px">
+          <label>Участники</label>
+          <textarea placeholder="Добавьте участников по одному на строку">Айдар Садыков
+Алия Касымова
+Марат Нурпеисов</textarea>
+        </div>
+
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:18px">
+          <button class="secondary-btn" data-view-target="meetings">Отмена</button>
+          <button class="primary-btn" id="startProcessing">Начать обработку</button>
+        </div>
+
+        <div class="processing-card" id="processingCard">
+          <div class="processing-head">
+            <div>
+              <strong style="font-size:14px">Обработка записи</strong>
+              <div class="row-meta">meeting_23_09.m4a · можно закрыть страницу</div>
+            </div>
+            <span class="status processing"><span class="status-dot"></span>В процессе</span>
+          </div>
+          <div class="steps">
+            <div class="step done"><span class="step-icon">✓</span>Файл загружен</div>
+            <div class="step done"><span class="step-icon">✓</span>Аудио подготовлено</div>
+            <div class="step active"><span class="step-icon">●</span>Распознаём речь</div>
+            <div class="step"><span class="step-icon">○</span>Определяем говорящих</div>
+            <div class="step"><span class="step-icon">○</span>Формируем резюме и поручения</div>
+          </div>
+          <div class="progress"><span></span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- MEETING CARD -->
+    <section class="page view" id="view-meeting">
+      <button class="back-link" data-view-target="meetings">← Совещания</button>
+
+      <div class="meeting-head">
+        <div>
+          <h1 class="meeting-title">Еженедельное совещание руководства</h1>
+          <div class="meeting-meta">
+            <span>23 сентября · 10:00–11:16</span>
+            <span>8 участников</span>
+            <span>RU / KK</span>
+          </div>
+        </div>
+        <div class="meeting-actions">
+          <button class="secondary-btn">История</button>
+          <button class="secondary-btn">⋯</button>
+          <button class="primary-btn" id="exportBtn">Скачать DOCX</button>
+        </div>
+      </div>
+
+      <div class="review-banner">
+        <span>●</span>
+        <div>
+          <strong>5 мест требуют проверки.</strong>
+          В основном — имена говорящих и сроки, которые система интерпретировала из речи.
+        </div>
+        <button class="secondary-btn" id="nextIssue">Перейти к следующему →</button>
+      </div>
+
+      <div class="mobile-workspace-switch segmented">
+        <button class="segment active" data-mobile-workspace="protocol">Протокол</button>
+        <button class="segment" data-mobile-workspace="transcript">Стенограмма</button>
+      </div>
+
+      <div class="workspace show-protocol" id="workspace">
+        <section class="transcript-pane">
+          <div class="pane-head">
+            <div class="pane-title">Стенограмма</div>
+            <div class="search"><input placeholder="Поиск в стенограмме" /></div>
+          </div>
+
+          <div class="transcript-list">
+            <article class="utterance" id="u-1032">
+              <div class="time">10:32</div>
+              <div>
+                <div class="speaker-row">
+                  <span class="speaker">Айдар Садыков</span>
+                  <span class="lang">RU</span>
+                </div>
+                <p>Нужно завершить сверку бюджета до конца месяца и отправить финальную версию в секретариат.</p>
+                <div class="audio-inline"><button class="mini-play">▶</button>10:31:48–10:32:14</div>
+              </div>
+            </article>
+
+            <article class="utterance" id="u-1034">
+              <div class="time">10:34</div>
+              <div>
+                <div class="speaker-row">
+                  <span class="speaker">Алия Касымова</span>
+                  <span class="lang">KK</span>
+                </div>
+                <p>Жаңартылған нұсқасын жұма күні жібереміз. Барлық бөлімдерден соңғы деректерді жинап алу керек.</p>
+                <div class="audio-inline"><button class="mini-play">▶</button>10:34:02–10:34:22</div>
+              </div>
+            </article>
+
+            <article class="utterance" id="u-1035">
+              <div class="time">10:35</div>
+              <div>
+                <div class="speaker-row">
+                  <span class="speaker">Председатель</span>
+                  <span class="lang">RU</span>
+                </div>
+                <p>Айдар, тогда это за вами. До <span class="uncertain" title="Система интерпретировала срок">конца месяца</span> вопрос нужно закрыть.</p>
+                <div class="audio-inline"><button class="mini-play">▶</button>10:35:01–10:35:16</div>
+              </div>
+            </article>
+
+            <article class="utterance" id="u-1044">
+              <div class="time">10:44</div>
+              <div>
+                <div class="speaker-row">
+                  <span class="speaker">Марат Нурпеисов</span>
+                  <span class="confidence">Низкая уверенность</span>
+                  <span class="lang">RU</span>
+                </div>
+                <p>Передайте документы в <span class="uncertain">Каскеленский</span> отдел, а копию оставьте у нас.</p>
+                <div class="audio-inline"><button class="mini-play">▶</button>10:43:52–10:44:11</div>
+              </div>
+            </article>
+
+            <article class="utterance" id="u-1051">
+              <div class="time">10:51</div>
+              <div>
+                <div class="speaker-row">
+                  <span class="speaker">Speaker 4</span>
+                  <span class="confidence">Проверить имя</span>
+                  <span class="lang">KK</span>
+                </div>
+                <p>Келесі аптаға дейін мердігерлердің тізімін жаңартып, жауапты тұлғалармен келісіп шығыңыздар.</p>
+                <div class="audio-inline"><button class="mini-play">▶</button>10:50:48–10:51:09</div>
+              </div>
+            </article>
+
+            <article class="utterance" id="u-1102">
+              <div class="time">11:02</div>
+              <div>
+                <div class="speaker-row">
+                  <span class="speaker">Алия Касымова</span>
+                  <span class="lang">RU</span>
+                </div>
+                <p>Проект письма министерству подготовлю сегодня и направлю вам на согласование до пяти вечера.</p>
+                <div class="audio-inline"><button class="mini-play">▶</button>11:02:03–11:02:18</div>
+              </div>
+            </article>
+
+            <article class="utterance" id="u-1110">
+              <div class="time">11:10</div>
+              <div>
+                <div class="speaker-row">
+                  <span class="speaker">Председатель</span>
+                  <span class="lang">RU</span>
+                </div>
+                <p>Тогда фиксируем три ключевых решения и в протоколе отдельно отмечаем контрольные сроки.</p>
+                <div class="audio-inline"><button class="mini-play">▶</button>11:09:56–11:10:15</div>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <aside class="protocol-pane">
+          <div class="pane-head">
+            <div class="pane-title">Протокол</div>
+            <span class="status warn" style="margin-left:auto"><span class="status-dot"></span>Черновик</span>
+          </div>
+
+          <div class="protocol-tabs">
+            <button class="protocol-tab active" data-protocol-tab="summary">Резюме</button>
+            <button class="protocol-tab" data-protocol-tab="decisions">Решения</button>
+            <button class="protocol-tab" data-protocol-tab="tasks">Поручения <span style="color:var(--muted)">7</span></button>
+          </div>
+
+          <div class="protocol-content">
+            <section class="protocol-section active" id="protocol-summary">
+              <div class="summary-block">
+                <div class="section-eyebrow">Краткое содержание</div>
+                <textarea>Обсудили завершение сверки бюджета, актуализацию списка подрядчиков и подготовку письма министерству. По итогам назначены ответственные и контрольные сроки. Часть имён и сроков требует проверки перед экспортом протокола.</textarea>
+                <div class="ai-note"><span class="ai-spark">✦</span>Предложено TaldauAI · можно редактировать</div>
+              </div>
+
+              <div class="summary-block">
+                <div class="section-eyebrow">Ключевые темы</div>
+                <div class="decision">Сверка и финализация бюджета на текущий период.</div>
+                <div class="decision">Актуализация перечня подрядчиков и ответственных лиц.</div>
+                <div class="decision">Подготовка официального письма в министерство.</div>
+              </div>
+            </section>
+
+            <section class="protocol-section" id="protocol-decisions">
+              <div class="section-eyebrow">Зафиксированные решения</div>
+              <div class="decision">
+                Завершить сверку бюджета и направить финальную версию в секретариат.
+                <div class="meta">Источник: 10:32–10:35</div>
+              </div>
+              <div class="decision">
+                Обновить перечень подрядчиков до следующей недели.
+                <div class="meta">Источник: 10:51</div>
+              </div>
+              <div class="decision">
+                Подготовить проект письма министерству до конца рабочего дня.
+                <div class="meta">Источник: 11:02</div>
+              </div>
+            </section>
+
+            <section class="protocol-section" id="protocol-tasks">
+              <div class="section-eyebrow">Поручения</div>
+
+              <div class="task-card selected" data-task="1">
+                <div class="task-top">
+                  <div class="task-number">01</div>
+                  <div class="task-main">
+                    <input class="task-title-input" value="Завершить сверку бюджета и отправить финальную версию" />
+                    <div class="task-state">● Нужно проверить срок</div>
+                  </div>
+                </div>
+                <div class="task-grid">
+                  <div class="mini-field">
+                    <label>Ответственный</label>
+                    <select>
+                      <option>Айдар Садыков</option>
+                      <option>Алия Касымова</option>
+                    </select>
+                  </div>
+                  <div class="mini-field">
+                    <label>Срок</label>
+                    <input value="30 сентября" />
+                  </div>
+                </div>
+                <div class="evidence">
+                  <button class="evidence-link" data-source="u-1032">↗ Основание · 10:32–10:35</button>
+                  <div class="evidence-quote">«Нужно завершить сверку бюджета до конца месяца… Айдар, тогда это за вами.»</div>
+                </div>
+                <div class="task-actions">
+                  <button class="primary-btn verify-task">Подтвердить</button>
+                  <button class="secondary-btn">Изменить источник</button>
+                </div>
+              </div>
+
+              <div class="task-card" data-task="2">
+                <div class="task-top">
+                  <div class="task-number">02</div>
+                  <div class="task-main">
+                    <input class="task-title-input" value="Обновить список подрядчиков и согласовать ответственных" />
+                    <div class="task-state">● Проверить говорящего</div>
+                  </div>
+                </div>
+                <div class="task-grid">
+                  <div class="mini-field">
+                    <label>Ответственный</label>
+                    <select>
+                      <option>Марат Нурпеисов</option>
+                      <option>Не определён</option>
+                    </select>
+                  </div>
+                  <div class="mini-field">
+                    <label>Срок</label>
+                    <input value="До следующей недели" />
+                  </div>
+                </div>
+                <div class="evidence">
+                  <button class="evidence-link" data-source="u-1051">↗ Основание · 10:51</button>
+                  <div class="evidence-quote">«Келесі аптаға дейін мердігерлердің тізімін жаңартып…»</div>
+                </div>
+                <div class="task-actions">
+                  <button class="primary-btn verify-task">Подтвердить</button>
+                  <button class="secondary-btn">Исправить</button>
+                </div>
+              </div>
+
+              <div class="task-card" data-task="3">
+                <div class="task-top">
+                  <div class="task-number">03</div>
+                  <div class="task-main">
+                    <input class="task-title-input" value="Подготовить проект письма министерству" />
+                    <div class="task-state verified">✓ Проверено пользователем</div>
+                  </div>
+                </div>
+                <div class="task-grid">
+                  <div class="mini-field">
+                    <label>Ответственный</label>
+                    <select>
+                      <option>Алия Касымова</option>
+                    </select>
+                  </div>
+                  <div class="mini-field">
+                    <label>Срок</label>
+                    <input value="Сегодня, 17:00" />
+                  </div>
+                </div>
+                <div class="evidence">
+                  <button class="evidence-link" data-source="u-1102">↗ Основание · 11:02</button>
+                  <div class="evidence-quote">«Проект письма министерству подготовлю сегодня… до пяти вечера.»</div>
+                </div>
+              </div>
+
+              <button class="add-task">+ Добавить поручение вручную</button>
+            </section>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- TASKS -->
+    <section class="page view" id="view-tasks">
+      <div class="page-heading">
+        <div>
+          <h1 class="page-title">Контроль поручений</h1>
+          <div class="page-subtitle">
+            Быстрая проверка сроков и ответственных по всем совещаниям. Выполненные поручения остаются в истории.
+          </div>
+        </div>
+        <button class="secondary-btn">Экспорт списка</button>
+      </div>
+
+      <div class="task-toolbar">
+        <button class="filter-btn active">Все</button>
+        <button class="filter-btn">Мои</button>
+        <button class="filter-btn">Просрочено 4</button>
+        <button class="filter-btn">Без срока 2</button>
+        <div class="search">
+          <input type="search" placeholder="Поиск по поручениям" />
+        </div>
+        <button class="filter-btn">Ответственный ▾</button>
+        <button class="filter-btn">Совещание ▾</button>
+      </div>
+
+      <div class="table-card">
+        <table>
+          <thead>
+            <tr>
+              <th></th>
+              <th>Поручение</th>
+              <th>Ответственный</th>
+              <th>Совещание</th>
+              <th>Срок</th>
+              <th>Статус</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><input class="checkbox task-check" type="checkbox" /></td>
+              <td><div class="row-title">Завершить сверку бюджета</div><div class="row-meta">Основание · 10:32</div></td>
+              <td>Айдар Садыков</td>
+              <td>Совещание руководства</td>
+              <td class="due-soon">30 сен</td>
+              <td><span class="status warn"><span class="status-dot"></span>Проверить</span></td>
+            </tr>
+            <tr>
+              <td><input class="checkbox task-check" type="checkbox" /></td>
+              <td><div class="row-title">Передать документы в территориальный отдел</div><div class="row-meta">Основание · 10:44</div></td>
+              <td>Марат Нурпеисов</td>
+              <td>Совещание руководства</td>
+              <td class="due-overdue">24 сен</td>
+              <td><span class="status danger"><span class="status-dot"></span>Просрочено</span></td>
+            </tr>
+            <tr>
+              <td><input class="checkbox task-check" type="checkbox" /></td>
+              <td><div class="row-title">Обновить список подрядчиков</div><div class="row-meta">Основание · 10:51</div></td>
+              <td>Не подтверждён</td>
+              <td>Совещание руководства</td>
+              <td>До 30 сен</td>
+              <td><span class="status warn"><span class="status-dot"></span>Проверить</span></td>
+            </tr>
+            <tr class="done-row">
+              <td><input class="checkbox task-check" type="checkbox" checked /></td>
+              <td><div class="row-title">Подготовить письмо министерству</div><div class="row-meta">Основание · 11:02</div></td>
+              <td>Алия Касымова</td>
+              <td>Совещание руководства</td>
+              <td>23 сен</td>
+              <td><span class="status ok"><span class="status-dot"></span>Выполнено</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</div>
+
+<nav class="mobile-bottom">
+  <button class="active" data-view-target="meetings"><span class="micon">▦</span>Встречи</button>
+  <button data-view-target="new"><span class="micon">＋</span>Новая</button>
+  <button data-view-target="meeting"><span class="micon">▤</span>Протокол</button>
+  <button data-view-target="tasks"><span class="micon">✓</span>Поручения</button>
+</nav>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const views = {
+    meetings: {el: document.querySelector('#view-meetings'), title:'Совещания'},
+    new: {el: document.querySelector('#view-new'), title:'Новое совещание'},
+    meeting: {el: document.querySelector('#view-meeting'), title:'Карточка совещания'},
+    tasks: {el: document.querySelector('#view-tasks'), title:'Контроль поручений'}
+  };
+
+  function showView(name){
+    Object.values(views).forEach(v => v.el.classList.remove('active'));
+    views[name].el.classList.add('active');
+    document.querySelector('#topbarTitle').textContent = views[name].title;
+
+    document.querySelectorAll('.nav-btn[data-view]').forEach(b => {
+      b.classList.toggle('active', b.dataset.view === name);
+    });
+    document.querySelectorAll('.mobile-bottom button').forEach(b => {
+      b.classList.toggle('active', b.dataset.viewTarget === name);
+    });
+
+    window.scrollTo({top:0, behavior:'smooth'});
+  }
+
+  document.querySelectorAll('[data-view]').forEach(btn=>{
+    btn.addEventListener('click', ()=>showView(btn.dataset.view));
+  });
+  document.querySelectorAll('[data-view-target]').forEach(btn=>{
+    btn.addEventListener('click', ()=>showView(btn.dataset.viewTarget));
+  });
+  document.querySelector('[data-open-meeting]').addEventListener('click', ()=>showView('meeting'));
+
+  // Upload tabs
+  document.querySelectorAll('[data-upload-tab]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('.upload-tab').forEach(x=>x.classList.remove('active'));
+      document.querySelectorAll('.upload-pane').forEach(x=>x.classList.remove('active'));
+      btn.classList.add('active');
+      document.querySelector('#upload-'+btn.dataset.uploadTab+'-pane').classList.add('active');
+    });
+  });
+
+  const fileInput = document.querySelector('#fileInput');
+  const chooseFile = document.querySelector('#chooseFile');
+  const filePreview = document.querySelector('#uploadFilePreview');
+  const fileName = document.querySelector('#fileName');
+  chooseFile.addEventListener('click', ()=>fileInput.click());
+  fileInput.addEventListener('change', ()=>{
+    if(fileInput.files[0]){
+      fileName.textContent = fileInput.files[0].name;
+      filePreview.classList.add('show');
+    }
+  });
+  document.querySelector('#removeFile').addEventListener('click', ()=>{
+    fileInput.value='';
+    filePreview.classList.remove('show');
+  });
+
+  const dropzone = document.querySelector('#dropzone');
+  ['dragenter','dragover'].forEach(evt=>dropzone.addEventListener(evt,e=>{
+    e.preventDefault(); dropzone.classList.add('drag');
+  }));
+  ['dragleave','drop'].forEach(evt=>dropzone.addEventListener(evt,e=>{
+    e.preventDefault(); dropzone.classList.remove('drag');
+  }));
+  dropzone.addEventListener('drop', e=>{
+    if(e.dataTransfer.files[0]){
+      fileName.textContent=e.dataTransfer.files[0].name;
+      filePreview.classList.add('show');
+    }
+  });
+
+  // Fake recording
+  let recording=false;
+  document.querySelector('#recordButton').addEventListener('click', e=>{
+    recording=!recording;
+    e.currentTarget.classList.toggle('recording', recording);
+    document.querySelector('#recordTitle').textContent = recording ? 'Идёт запись' : 'Начать запись';
+    toast(recording ? 'Запись началась' : 'Запись остановлена');
+  });
+
+  // Processing
+  document.querySelector('#startProcessing').addEventListener('click', ()=>{
+    document.querySelector('#processingCard').classList.add('show');
+    toast('Обработка записи началась');
+  });
+
+  // Protocol tabs
+  document.querySelectorAll('[data-protocol-tab]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('.protocol-tab').forEach(x=>x.classList.remove('active'));
+      document.querySelectorAll('.protocol-section').forEach(x=>x.classList.remove('active'));
+      btn.classList.add('active');
+      document.querySelector('#protocol-'+btn.dataset.protocolTab).classList.add('active');
+    });
+  });
+
+  // Evidence links -> transcript
+  document.querySelectorAll('.evidence-link').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('.utterance').forEach(x=>x.classList.remove('highlight'));
+      const id=btn.dataset.source;
+      const target=document.getElementById(id);
+      target.classList.add('highlight');
+
+      if(window.innerWidth <= 860){
+        document.querySelector('#workspace').classList.remove('show-protocol');
+        document.querySelector('#workspace').classList.add('show-transcript');
+        document.querySelectorAll('[data-mobile-workspace]').forEach(x=>{
+          x.classList.toggle('active', x.dataset.mobileWorkspace === 'transcript');
+        });
+        setTimeout(()=>target.scrollIntoView({behavior:'smooth',block:'center'}),80);
+      } else {
+        target.scrollIntoView({behavior:'smooth',block:'center'});
+      }
+    });
+  });
+
+  // Verify task
+  document.querySelectorAll('.verify-task').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const card=btn.closest('.task-card');
+      const state=card.querySelector('.task-state');
+      state.textContent='✓ Проверено пользователем';
+      state.classList.add('verified');
+      btn.remove();
+      toast('Поручение подтверждено');
+    });
+  });
+
+  // Select task
+  document.querySelectorAll('.task-card').forEach(card=>{
+    card.addEventListener('click', e=>{
+      if(e.target.matches('button,input,select')) return;
+      document.querySelectorAll('.task-card').forEach(x=>x.classList.remove('selected'));
+      card.classList.add('selected');
+    });
+  });
+
+  // Mobile workspace switch
+  document.querySelectorAll('[data-mobile-workspace]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('[data-mobile-workspace]').forEach(x=>x.classList.remove('active'));
+      btn.classList.add('active');
+      const workspace=document.querySelector('#workspace');
+      workspace.classList.toggle('show-transcript', btn.dataset.mobileWorkspace==='transcript');
+      workspace.classList.toggle('show-protocol', btn.dataset.mobileWorkspace==='protocol');
+    });
+  });
+
+  // Tasks checkbox
+  document.querySelectorAll('.task-check').forEach(ch=>{
+    ch.addEventListener('change', ()=>{
+      const row=ch.closest('tr');
+      row.classList.toggle('done-row', ch.checked);
+      const status=row.querySelector('.status');
+      if(ch.checked){
+        status.className='status ok';
+        status.innerHTML='<span class="status-dot"></span>Выполнено';
+      }else{
+        status.className='status warn';
+        status.innerHTML='<span class="status-dot"></span>В работе';
+      }
+    });
+  });
+
+  // Next issue
+  const issues=['u-1035','u-1044','u-1051'];
+  let issueIndex=0;
+  document.querySelector('#nextIssue').addEventListener('click', ()=>{
+    const target=document.getElementById(issues[issueIndex % issues.length]);
+    document.querySelectorAll('.utterance').forEach(x=>x.classList.remove('highlight'));
+    target.classList.add('highlight');
+    target.scrollIntoView({behavior:'smooth',block:'center'});
+    issueIndex++;
+  });
+
+  // Export demo
+  document.querySelector('#exportBtn').addEventListener('click', ()=>{
+    toast('DOCX будет доступен после подтверждения всех критичных полей');
+  });
+
+  // Segments / filters visual
+  document.querySelectorAll('.segmented').forEach(group=>{
+    group.querySelectorAll('.segment').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        if(btn.hasAttribute('data-mobile-workspace')) return;
+        group.querySelectorAll('.segment').forEach(x=>x.classList.remove('active'));
+        btn.classList.add('active');
+      });
+    });
+  });
+  document.querySelectorAll('.filter-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      if(btn.textContent.includes('▾')) return;
+      const siblings=btn.parentElement.querySelectorAll('.filter-btn');
+      siblings.forEach(x=>{if(!x.textContent.includes('▾')) x.classList.remove('active')});
+      btn.classList.add('active');
+    });
+  });
+
+  function toast(message){
+    const t=document.querySelector('#toast');
+    t.textContent=message;
+    t.classList.add('show');
+    clearTimeout(window.__toastTimer);
+    window.__toastTimer=setTimeout(()=>t.classList.remove('show'),2200);
+  }
+</script>
+</body>
+</html>
