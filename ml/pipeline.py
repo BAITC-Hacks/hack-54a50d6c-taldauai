@@ -13,7 +13,7 @@ import tempfile
 import wave
 from datetime import date, datetime, timedelta
 from pathlib import Path
-from urllib.request import Request, urlopen
+from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_opener
 
 
 SUPPORTED_AUDIO = {".wav", ".mp3", ".m4a", ".mp4", ".ogg", ".flac", ".webm", ".opus", ".aac"}
@@ -22,6 +22,16 @@ SUPPORTED_AUDIO = {".wav", ".mp3", ".m4a", ".mp4", ".ogg", ".flac", ".webm", ".o
 os.environ["PYANNOTE_METRICS_ENABLED"] = "0"
 os.environ["HF_HUB_DISABLE_TELEMETRY"] = "1"
 os.environ["HF_HUB_OFFLINE"] = "1"
+
+
+class _NoRedirect(HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        raise RuntimeError("Local Ollama redirects are not allowed")
+
+
+def _local_open(request, timeout):
+    # Meeting data must not be routed through a proxy from shell configuration.
+    return build_opener(ProxyHandler({}), _NoRedirect()).open(request, timeout=timeout)
 
 
 def _meeting_date(value: str) -> date:
@@ -168,10 +178,13 @@ def _ollama_chat(model: str, prompt: str, schema: dict) -> dict:
     request = Request(base_url + "/api/chat", data=json.dumps(payload).encode(),
                       headers={"Content-Type": "application/json"})
     try:
-        with urlopen(request, timeout=300) as response:
+        with _local_open(request, timeout=300) as response:
             answer = json.load(response)
     except OSError as exc:
         raise RuntimeError(f"Local Ollama inference failed: {exc}") from exc
+    if (not isinstance(answer, dict) or not isinstance(answer.get("message"), dict)
+            or not isinstance(answer["message"].get("content"), str)):
+        raise RuntimeError("Local Ollama returned an invalid chat response")
     return json.loads(answer["message"]["content"])
 
 
@@ -218,13 +231,22 @@ def _kazllm_suggestions(segments: list[dict]) -> list[str]:
 def _extract(segments: list[dict], started_at: str, speakers: list[dict]) -> dict:
     model = os.environ.get("TALDAU_LLM_MODEL", "qwen2.5:7b")
     prompt = (
+        "Ты секретарь совещания на русском и казахском языках. "
+        "Описание задач и саммари пиши по-русски, имена людей не переводи. "
         "Извлеки ВСЕ явные поручения из протокола. Сохрани несколько поручений из одной реплики. "
+        "В tasks включай только действующие поручения, которые ещё предстоит выполнить. "
+        "Сообщения о выполненной работе, отмена старого поручения и отсутствие новых задач "
+        "не являются новыми поручениями: при их отсутствии верни tasks=[]. "
         "Повтор поручения или подтверждение исполнителя не создаёт новое поручение. "
+        "Используй источник, где поручение назначили, а не только ответ с подтверждением. "
         "В сегментах text — дословный ASR, suggested_text — необязательная подсказка KazLLM. "
         "Опирайся на text; используй suggested_text только для исправления очевидных ошибок. "
         "Исполнитель — адресат поручения, а не обязательно говорящий. "
         "Укажи assignee_speaker_id только при явной связи имени с говорящим в диалоге; иначе null. "
         "Если исполнитель или срок неясен, верни null. Для срока сохрани исходные слова в due_text. "
+        "Казахские сроки: ертең = завтра, бүгін = сегодня, жұмаға дейін = до пятницы. "
+        "Например, при слове ертең поле due_text должно содержать ертең, а не null. "
+        "Не подставляй слова 'неизвестно' и местоимения 'я'/'мен' в имя: верни null. "
         "due_date заполняй только для однозначной календарной даты; иначе null. "
         "Каждому поручению дай source_segment_ids из приведённых сегментов. "
         "Краткое саммари должно опираться только на реплики. "
@@ -333,11 +355,24 @@ def _validate_extraction(raw: dict, segments: list[dict], speakers: list[dict], 
             warnings.append(f"Task {index} omitted: invalid source segments")
             continue
         assignee_name = item.get("assignee_name")
-        if not isinstance(assignee_name, str) or not assignee_name.strip():
+        if (not isinstance(assignee_name, str) or assignee_name.strip().casefold()
+                in {"", "null", "none", "неизвестно", "неизвестен", "не определён", "не определен", "белгісіз", "я", "мы", "мен", "біз"}):
             assignee_name = None
+        else:
+            assignee_name = assignee_name.strip()
         assignee_id = item.get("assignee_speaker_id")
         assigner_id = item.get("assigner_speaker_id")
         if not isinstance(assignee_id, str) or assignee_id not in valid_speakers:
+            assignee_id = None
+        if assignee_name:
+            mapped = [sid for sid, name in confirmed_names.items()
+                      if isinstance(name, str) and name.strip().casefold() == assignee_name.casefold()]
+            if len(mapped) == 1:
+                assignee_id = mapped[0]
+            elif assignee_id and confirmed_names.get(assignee_id):
+                warnings.append(f"Task {index}: assignee conflicts with the confirmed speaker name")
+                assignee_id = None
+        else:
             assignee_id = None
         if not isinstance(assigner_id, str) or assigner_id not in valid_speakers:
             assigner_id = None
@@ -346,7 +381,8 @@ def _validate_extraction(raw: dict, segments: list[dict], speakers: list[dict], 
             warnings.append(f"Task {index}: assigner is not a speaker in the cited segments")
             assigner_id = None
         due_text = item.get("due_text")
-        if not isinstance(due_text, str) or not due_text.strip():
+        if (not isinstance(due_text, str) or due_text.strip().casefold()
+                in {"", "null", "none", "неизвестно", "белгісіз"}):
             due_text = None
         due_date = _resolve_due_date(item.get("due_date"), due_text, meeting_day)
         tasks.append({
