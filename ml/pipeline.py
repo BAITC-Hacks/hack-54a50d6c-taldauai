@@ -87,7 +87,7 @@ def _transcribe(path: Path) -> list[dict]:
     return segments
 
 
-def _diarize(path: Path) -> list[dict]:
+def _diarize(path: Path, num_speakers: int | None = None) -> list[dict]:
     model_path = os.environ.get("TALDAU_DIARIZATION_MODEL")
     if not model_path or not Path(model_path).is_dir():
         raise RuntimeError("TALDAU_DIARIZATION_MODEL must point to a downloaded local pipeline")
@@ -101,7 +101,15 @@ def _diarize(path: Path) -> list[dict]:
         raise RuntimeError("Could not load the local diarization pipeline")
     if os.environ.get("TALDAU_DEVICE") == "cuda":
         pipeline.to(torch.device("cuda"))
-    output = pipeline(str(path))
+    # Audio was already decoded by ffmpeg. Passing PCM avoids a second decoder
+    # and torchcodec/FFmpeg shared-library mismatches on macOS.
+    import numpy as np
+    with wave.open(str(path), "rb") as stream:
+        if (stream.getnchannels(), stream.getframerate(), stream.getsampwidth()) != (1, 16000, 2):
+            raise ValueError("Diarization requires mono 16 kHz PCM16 WAV")
+        samples = np.frombuffer(stream.readframes(stream.getnframes()), dtype="<i2").astype(np.float32) / 32768
+    options = {"num_speakers": num_speakers} if num_speakers is not None else {}
+    output = pipeline({"waveform": torch.from_numpy(samples).unsqueeze(0), "sample_rate": 16000}, **options)
     annotation = output.speaker_diarization
     turns = []
     for turn, _, speaker in annotation.itertracks(yield_label=True):
@@ -204,6 +212,7 @@ def _extract(segments: list[dict], started_at: str, speakers: list[dict]) -> dic
     model = os.environ.get("TALDAU_LLM_MODEL", "qwen2.5:7b")
     prompt = (
         "Извлеки ВСЕ явные поручения из протокола. Сохрани несколько поручений из одной реплики. "
+        "Повтор поручения или подтверждение исполнителя не создаёт новое поручение. "
         "В сегментах text — дословный ASR, suggested_text — необязательная подсказка KazLLM. "
         "Опирайся на text; используй suggested_text только для исправления очевидных ошибок. "
         "Исполнитель — адресат поручения, а не обязательно говорящий. "
@@ -343,12 +352,15 @@ def _validate_extraction(raw: dict, segments: list[dict], speakers: list[dict], 
 
 
 def process_meeting(audio_path: str, meeting_started_at: str,
-                    speaker_names: dict[str, str] | None = None) -> dict:
+                    speaker_names: dict[str, str] | None = None,
+                    *, num_speakers: int | None = None) -> dict:
     """Process a local recording and return JSON-serializable protocol v1.
 
     Raises ValueError for bad input and RuntimeError for unavailable local models.
     """
     meeting_day = _meeting_date(meeting_started_at)
+    if num_speakers is not None and (type(num_speakers) is not int or not 1 <= num_speakers <= 32):
+        raise ValueError("num_speakers must be between 1 and 32")
     source = Path(audio_path).expanduser().resolve()
     if not source.is_file() or source.suffix.lower() not in SUPPORTED_AUDIO:
         raise ValueError("audio_path must point to an existing supported audio file")
@@ -358,7 +370,7 @@ def process_meeting(audio_path: str, meeting_started_at: str,
         wav_path = Path(tmp) / "audio.wav"
         _convert_audio(source, wav_path)
         asr = _transcribe(wav_path)
-        turns = _diarize(wav_path)
+        turns = _diarize(wav_path, num_speakers)
     segments, speakers = _combine(asr, turns)
     for speaker in speakers:
         speaker["display_name"] = (speaker_names or {}).get(speaker["id"])
