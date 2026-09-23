@@ -29,7 +29,7 @@ def _convert_audio(path: Path, destination: Path) -> None:
     try:
         subprocess.run(
             ["ffmpeg", "-nostdin", "-v", "error", "-y", "-i", str(path),
-             "-ac", "1", "-ar", "16000", "-f", "wav", str(destination)],
+             "-ac", "1", "-ar", "16000", "-c:a", "pcm_s16le", "-f", "wav", str(destination)],
             check=True, capture_output=True, text=True, timeout=600,
         )
     except FileNotFoundError as exc:
@@ -39,6 +39,12 @@ def _convert_audio(path: Path, destination: Path) -> None:
 
 
 def _transcribe(path: Path) -> list[dict]:
+    engine = os.environ.get("TALDAU_ASR_ENGINE", "whisper")
+    if engine == "mixed-ctc":
+        from .mixed_asr import transcribe
+        return transcribe(path, os.environ.get("TALDAU_ASR_MODEL", ""), os.environ.get("TALDAU_DEVICE", "cpu"))
+    if engine != "whisper":
+        raise ValueError("TALDAU_ASR_ENGINE must be whisper or mixed-ctc")
     try:
         from faster_whisper import WhisperModel
     except ImportError as exc:
@@ -62,6 +68,8 @@ def _transcribe(path: Path) -> list[dict]:
             "start_ms": round(item.start * 1000),
             "end_ms": round(item.end * 1000),
             "text": item.text.strip(),
+            "words": [{"text": word.word.strip(), "start_ms": round(word.start * 1000),
+                       "end_ms": round(word.end * 1000)} for word in (item.words or []) if word.word.strip()],
         })
     return segments
 
@@ -79,9 +87,7 @@ def _diarize(path: Path) -> list[dict]:
     if os.environ.get("TALDAU_DEVICE") == "cuda":
         pipeline.to(torch.device("cuda"))
     output = pipeline(str(path))
-    annotation = getattr(output, "exclusive_speaker_diarization", None)
-    if annotation is None:
-        annotation = output.speaker_diarization
+    annotation = output.speaker_diarization
     turns = []
     for turn, _, speaker in annotation.itertracks(yield_label=True):
         turns.append({"start_ms": round(turn.start * 1000),
@@ -95,27 +101,96 @@ def _combine(asr: list[dict], turns: list[dict]) -> tuple[list[dict], list[dict]
                key=lambda name: min(t["start_ms"] for t in turns if t["speaker"] == name))
     )}
     segments = []
-    for index, item in enumerate(asr, 1):
+    def speaker_for(item):
         overlaps: dict[str, int] = {}
         for turn in turns:
             overlap = max(0, min(item["end_ms"], turn["end_ms"]) - max(item["start_ms"], turn["start_ms"]))
             overlaps[turn["speaker"]] = overlaps.get(turn["speaker"], 0) + overlap
         best = max(overlaps, key=overlaps.get) if overlaps else None
         duration = max(1, item["end_ms"] - item["start_ms"])
-        speaker_id = speaker_ids[best] if best and overlaps[best] >= duration * 0.5 else None
-        segments.append({"id": f"seg_{index:04d}", **item,
-                         "speaker_id": speaker_id, "language": None})
+        ranked = sorted(overlaps.values(), reverse=True)
+        if (best is not None and overlaps[best] >= duration * 0.5
+                and (len(ranked) < 2 or ranked[0] > ranked[1])):
+            return speaker_ids[best]
+        return None
+
+    for item in asr:
+        current = None
+        for word in item.get("words") or [item]:
+            speaker_id = speaker_for(word)
+            if current and current["speaker_id"] == speaker_id:
+                current["text"] += " " + word["text"]
+                current["end_ms"] = word["end_ms"]
+            else:
+                current = {"id": f"seg_{len(segments)+1:04d}", "start_ms": word["start_ms"],
+                           "end_ms": word["end_ms"], "text": word["text"],
+                           "speaker_id": speaker_id, "language": None}
+                segments.append(current)
     speakers = [{"id": sid, "display_name": None} for sid in speaker_ids.values()]
     return segments, speakers
 
 
-def _extract(segments: list[dict], started_at: str, speakers: list[dict]) -> dict:
+def _ollama_chat(model: str, prompt: str, schema: dict) -> dict:
     base_url = os.environ.get("TALDAU_OLLAMA_URL", "http://127.0.0.1:11434")
     if not re.fullmatch(r"http://(127\.0\.0\.1|localhost)(:\d+)?", base_url):
         raise ValueError("TALDAU_OLLAMA_URL must be a local HTTP address")
+    payload = {"model": model, "stream": False, "format": schema,
+               "options": {"temperature": 0},
+               "messages": [{"role": "user", "content": prompt}]}
+    request = Request(base_url + "/api/chat", data=json.dumps(payload).encode(),
+                      headers={"Content-Type": "application/json"})
+    try:
+        with urlopen(request, timeout=300) as response:
+            answer = json.load(response)
+    except OSError as exc:
+        raise RuntimeError(f"Local Ollama inference failed: {exc}") from exc
+    return json.loads(answer["message"]["content"])
+
+
+def _kazllm_suggestions(segments: list[dict]) -> list[str]:
+    """Propose text corrections; always retain the original ASR text."""
+    model = os.environ.get("TALDAU_KAZLLM_MODEL")
+    if not model:
+        return []
+    schema = {"type": "object", "required": ["segments"], "properties": {
+        "segments": {"type": "array", "items": {"type": "object",
+            "required": ["id", "text"], "properties": {
+                "id": {"type": "string"}, "text": {"type": "string"}}}}}}
+    warnings = []
+    for offset in range(0, len(segments), 20):
+        batch = segments[offset:offset + 20]
+        prompt = (
+            "Ты корректируешь результат распознавания шала-казахской речи. "
+            "Исправь только очевидные ошибки написания казахских и русских слов. "
+            "Сохраняй переключения языков: не переводи, не перефразируй, "
+            "не добавляй имена, числа, сроки и поручения. "
+            "При сомнении возвращай исходный текст без изменений. "
+            "Верни каждый id и исправленный text в том же порядке. "
+            f"Сегменты: {json.dumps([{'id': s['id'], 'text': s['text']} for s in batch], ensure_ascii=False)}"
+        )
+        try:
+            response = _ollama_chat(model, prompt, schema)
+            proposals = response["segments"]
+            if (not isinstance(proposals, list) or len(proposals) != len(batch)
+                    or any(not isinstance(p, dict) or p.get("id") != s["id"]
+                           or not isinstance(p.get("text"), str)
+                           for p, s in zip(proposals, batch))):
+                raise ValueError("KazLLM returned segments in an invalid format")
+            for segment, proposed in zip(batch, proposals):
+                suggestion = proposed["text"].strip()
+                if suggestion and suggestion != segment["text"]:
+                    segment["suggested_text"] = suggestion
+        except (RuntimeError, ValueError, KeyError, json.JSONDecodeError) as exc:
+            warnings.append(f"KazLLM suggestions unavailable for segments {batch[0]['id']}–{batch[-1]['id']}: {exc}")
+    return warnings
+
+
+def _extract(segments: list[dict], started_at: str, speakers: list[dict]) -> dict:
     model = os.environ.get("TALDAU_LLM_MODEL", "qwen2.5:7b")
     prompt = (
         "Извлеки ВСЕ явные поручения из протокола. Сохрани несколько поручений из одной реплики. "
+        "В сегментах text — дословный ASR, suggested_text — необязательная подсказка KazLLM. "
+        "Опирайся на text; используй suggested_text только для исправления очевидных ошибок. "
         "Исполнитель — адресат поручения, а не обязательно говорящий. "
         "Укажи assignee_speaker_id только при явной связи имени с говорящим в диалоге; иначе null. "
         "Если исполнитель или срок неясен, верни null. Для срока сохрани исходные слова в due_text. "
@@ -145,17 +220,7 @@ def _extract(segments: list[dict], started_at: str, speakers: list[dict]) -> dic
             }},
         },
     }
-    payload = {"model": model, "stream": False, "format": schema,
-               "options": {"temperature": 0},
-               "messages": [{"role": "user", "content": prompt}]}
-    request = Request(base_url + "/api/chat", data=json.dumps(payload).encode(),
-                      headers={"Content-Type": "application/json"})
-    try:
-        with urlopen(request, timeout=300) as response:
-            answer = json.load(response)
-    except OSError as exc:
-        raise RuntimeError(f"Local Ollama inference failed: {exc}") from exc
-    return json.loads(answer["message"]["content"])
+    return _ollama_chat(model, prompt, schema)
 
 
 def _resolve_due_date(value: str | None, due_text: str | None, meeting_day: date) -> str | None:
@@ -275,8 +340,10 @@ def process_meeting(audio_path: str, meeting_started_at: str,
     for speaker in speakers:
         speaker["display_name"] = (speaker_names or {}).get(speaker["id"])
     if segments:
+        correction_warnings = _kazllm_suggestions(segments)
         raw = _extract(segments, meeting_started_at, speakers)
         tasks, summary, warnings = _validate_extraction(raw, segments, speakers, meeting_day)
+        warnings = correction_warnings + warnings
     else:
         tasks, summary, warnings = [], "", ["Речь в записи не обнаружена"]
     return {"schema_version": "1.0", "meeting_started_at": meeting_started_at,

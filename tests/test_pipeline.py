@@ -1,7 +1,8 @@
 import unittest
 from datetime import date
+from unittest.mock import patch
 
-from ml.pipeline import _combine, _resolve_due_date, _validate_extraction
+from ml.pipeline import _combine, _kazllm_suggestions, _resolve_due_date, _validate_extraction
 from ml.evaluate import _edit_distance, _normalize
 
 
@@ -10,6 +11,17 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(_normalize("Қазақша, орысша!"), "қазақша орысша")
         self.assertEqual(_edit_distance("срок", "срок"), 0)
         self.assertEqual(_edit_distance("жұма", "жума"), 1)
+
+    def test_kazllm_keeps_original_and_adds_suggestion(self):
+        segments = [{"id": "seg_0001", "text": "Жумағадейн отчетты дайндап"}]
+        with patch.dict("os.environ", {"TALDAU_KAZLLM_MODEL": "taldau-kazllm"}):
+            with patch("ml.pipeline._ollama_chat", return_value={"segments": [
+                {"id": "seg_0001", "text": "Жұмаға дейін отчетты дайындап"}]}) as call:
+                warnings = _kazllm_suggestions(segments)
+        self.assertEqual(warnings, [])
+        self.assertEqual(segments[0]["text"], "Жумағадейн отчетты дайндап")
+        self.assertEqual(segments[0]["suggested_text"], "Жұмаға дейін отчетты дайындап")
+        self.assertEqual(call.call_args.args[0], "taldau-kazllm")
 
     def test_speaker_overlap_and_unknown_speaker(self):
         segments, speakers = _combine(

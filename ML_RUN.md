@@ -11,6 +11,8 @@
 - Скачанная локально multilingual-модель `faster-whisper`.
 - Скачанный локально pipeline `pyannote/speaker-diarization-community-1`.
 - Локальный Ollama с моделью `qwen2.5:7b` или другой моделью, дающей JSON по схеме.
+- Опционально: ISSAI KazLLM 8B GGUF4 для подсказок по исправлению смешанной
+  русско-казахской транскрипции. Модель принимает текст, а не аудио.
 
 На macOS `ffmpeg` можно установить через `brew install ffmpeg`; на Ubuntu —
 через `sudo apt install ffmpeg`. Для Python:
@@ -30,6 +32,21 @@ hf auth login
 hf download pyannote/speaker-diarization-community-1 --local-dir models/speaker-diarization-community-1
 ollama pull qwen2.5:7b
 ```
+
+Для KazLLM требуется принять условия доступа на [странице ISSAI](https://huggingface.co/issai/LLama-3.1-KazLLM-1.0-8B-GGUF4)
+и войти через `hf auth login`. После этого скачайте GGUF и создайте локальную
+модель Ollama:
+
+```bash
+hf download issai/LLama-3.1-KazLLM-1.0-8B-GGUF4 checkpoints_llama8b_031224_18900-Q4_K_M.gguf --local-dir models/kazllm
+printf 'FROM %s\n' "$PWD/models/kazllm/checkpoints_llama8b_031224_18900-Q4_K_M.gguf" > models/kazllm/Modelfile
+ollama create taldau-kazllm -f models/kazllm/Modelfile
+export TALDAU_KAZLLM_MODEL=taldau-kazllm
+```
+
+ISSAI распространяет KazLLM под CC-BY-NC-4.0 для некоммерческого применения;
+перед коммерческим развёртыванием нужны другие права. Без
+`TALDAU_KAZLLM_MODEL` этап подсказок пропускается.
 
 Для `pyannote` сначала примите условия доступа на странице модели Hugging Face.
 Команда `hf auth login` использует личный токен; не добавляйте его в репозиторий.

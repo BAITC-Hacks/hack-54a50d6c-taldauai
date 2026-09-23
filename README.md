@@ -19,13 +19,15 @@
 - Совмещение реплик с голосами по временным интервалам.
 - Извлечение поручений и саммари через локальный Ollama с проверкой структуры
   JSON, ссылок на исходные реплики и календарных сроков.
+- Необязательные подсказки локального ISSAI KazLLM для исправления смешанной
+  русско-казахской речи; исходный ASR-текст сохраняется.
 - Маркер `needs_review` для поручений с неуверенным исполнителем или сроком.
 - Python API `process_meeting` и команда `python -m ml`.
 
 ## Архитектура
 
 `аудиофайл → ffmpeg → faster-whisper → pyannote → совмещение по времени →
-локальная LLM → проверка JSON → backend`.
+KazLLM (подсказки) → локальная LLM → проверка JSON → backend`.
 
 Backend отвечает за загрузку и хранение файлов, ручное подтверждение,
 экспорт PDF/DOCX и напоминания. Формат обмена приведён в
@@ -82,7 +84,9 @@ python3.11 -m ml --help
 Веса требуется скачать заранее. Выбранные компоненты:
 [faster-whisper](https://github.com/SYSTRAN/faster-whisper),
 [pyannote.audio](https://github.com/pyannote/pyannote-audio),
-[Qwen2.5 7B через Ollama](https://ollama.com/library/qwen2.5:7b).
+[Qwen2.5 7B через Ollama](https://ollama.com/library/qwen2.5:7b),
+[ISSAI KazLLM 8B](https://huggingface.co/issai/LLama-3.1-KazLLM-1.0-8B-GGUF4)
+(необязателен, лицензия CC-BY-NC-4.0).
 Условия доступа и лицензии весов проверяйте перед распространением сборки.
 
 Имена голосов и спорные сроки должен проверить человек. Подключение к
