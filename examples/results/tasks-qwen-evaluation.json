@@ -21,17 +21,19 @@
           "assignee_speaker_id": "SPEAKER_01",
           "assigner_speaker_id": "SPEAKER_00",
           "due_date": "2026-09-25",
-          "due_text": "жұмаға дейін",
+          "due_text": "пятницы",
           "source_segment_ids": [
             "s1"
           ],
-          "needs_review": false,
+          "needs_review": true,
           "assignment_quote": "Марат, подготовьте отчёт по закупкам до пятницы."
         }
       ],
       "summary": "Алия поручила Марату подготовить отчёт по закупкам до пятницы.",
-      "warnings": [],
-      "elapsed_seconds": 7.11
+      "warnings": [
+        "Task 1: deadline wording recovered from transcript; review required"
+      ],
+      "elapsed_seconds": 22.59
     },
     {
       "id": "kk_confirmation",
@@ -60,7 +62,7 @@
       ],
       "summary": "Марат поручил Алие дайындау есепті, Алия подтвердила выполнение поручения на завтра.",
       "warnings": [],
-      "elapsed_seconds": 5.43
+      "elapsed_seconds": 5.28
     },
     {
       "id": "mixed_two_assignees",
@@ -103,7 +105,7 @@
       ],
       "summary": "Алия поручена подготовить бюджет до 25 сентября, Марат должен проверить договор завтра.",
       "warnings": [],
-      "elapsed_seconds": 8.23
+      "elapsed_seconds": 7.77
     },
     {
       "id": "completed_and_cancelled",
@@ -117,7 +119,7 @@
       "tasks": [],
       "summary": "На совещании было отменено поручение Марату проверить договор, отчет был отправлен вчера. Новых поручений нет.",
       "warnings": [],
-      "elapsed_seconds": 1.32
+      "elapsed_seconds": 1.31
     },
     {
       "id": "unknown_owner_deadline",
@@ -145,7 +147,7 @@
       ],
       "summary": "На совещании обсуждалось текучее согласование договора, но исполнитель не был определен.",
       "warnings": [],
-      "elapsed_seconds": 4.34
+      "elapsed_seconds": 4.24
     },
     {
       "id": "two_independent_actions",
@@ -164,11 +166,11 @@
           "assignee_speaker_id": "SPEAKER_01",
           "assigner_speaker_id": "SPEAKER_00",
           "due_date": "2026-09-24",
-          "due_text": "ертең",
+          "due_text": "завтра",
           "source_segment_ids": [
             "s1"
           ],
-          "needs_review": false,
+          "needs_review": true,
           "assignment_quote": "Марат, завтра проверьте договор. И отдельно подготовьте бюджет до пятницы."
         },
         {
@@ -178,17 +180,20 @@
           "assignee_speaker_id": "SPEAKER_01",
           "assigner_speaker_id": "SPEAKER_00",
           "due_date": "2026-09-25",
-          "due_text": "жұмаға дейін",
+          "due_text": "пятницы",
           "source_segment_ids": [
             "s1"
           ],
-          "needs_review": false,
+          "needs_review": true,
           "assignment_quote": "Марат, завтра проверьте договор. И отдельно подготовьте бюджет до пятницы."
         }
       ],
       "summary": "Алия поручила Марату проверить договор завтра и подготовить бюджет до пятницы.",
-      "warnings": [],
-      "elapsed_seconds": 7.1
+      "warnings": [
+        "Task 1: deadline wording recovered from transcript; review required",
+        "Task 2: deadline wording recovered from transcript; review required"
+      ],
+      "elapsed_seconds": 7.85
     }
   ]
 }

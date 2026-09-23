@@ -98,6 +98,29 @@ class AcceptanceTests(unittest.TestCase):
             reviewed = _review_assignments(raw, segments, [], "test")
         self.assertEqual(reviewed["tasks"][0]["assignee_name"], "Алия")
 
+    def test_deadline_from_other_task_cannot_become_confirmed_date(self):
+        raw = {"summary": "", "tasks": [{"description": "Отчёт", "assignee_name": "Алия",
+               "assignee_speaker_id": "b", "assigner_speaker_id": "a",
+               "due_text": "завтра", "source_segment_ids": ["s1"]}]}
+        speakers = [{"id": "a"}, {"id": "b", "display_name": "Алия"}]
+        segments = [{"id": "s1", "speaker_id": "a", "text": "Алия, подготовьте отчёт."},
+                    {"id": "s2", "speaker_id": "a", "text": "Марат, договор завтра."}]
+        tasks, _, warnings = _validate_extraction(raw, segments, speakers, date(2026, 9, 23))
+        self.assertIsNone(tasks[0]["due_date"])
+        self.assertTrue(tasks[0]["needs_review"])
+        self.assertTrue(warnings)
+        segments[0]["text"] = "Алия, подготовьте отчёт — завтра!"
+        tasks, _, warnings = _validate_extraction(raw, segments, speakers, date(2026, 9, 23))
+        self.assertEqual(tasks[0]["due_date"], "2026-09-24")
+        self.assertFalse(tasks[0]["needs_review"])
+        self.assertFalse(warnings)
+        raw["tasks"][0]["due_text"] = "ертең"
+        tasks, _, warnings = _validate_extraction(raw, segments, speakers, date(2026, 9, 23))
+        self.assertEqual(tasks[0]["due_date"], "2026-09-24")
+        self.assertEqual(tasks[0]["due_text"], "завтра")
+        self.assertTrue(tasks[0]["needs_review"])
+        self.assertTrue(warnings)
+
 
 if __name__ == "__main__":
     unittest.main()

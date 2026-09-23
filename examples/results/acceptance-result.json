@@ -111,7 +111,7 @@
       "assignee_speaker_id": "SPEAKER_00",
       "assigner_speaker_id": "SPEAKER_01",
       "due_date": "2026-09-25",
-      "due_text": "жұмаға дейін",
+      "due_text": "пятницы",
       "source_segment_ids": [
         "seg_0005",
         "seg_0007",
@@ -123,6 +123,7 @@
   ],
   "summary": "Поручения по итогам совещания: Данияр — данияр ертең договорды тексеріп заметани жіберіңіз (срок: 2026-09-24); Айдана — подготовьте отчёт до пятницы в отчёте нужны итоги закупок за месяц (срок: 2026-09-25)",
   "warnings": [
+    "Task 2: deadline wording recovered from transcript; review required",
     "Some speech has no reliable speaker assignment; review overlapping voices and diarization"
   ]
 }

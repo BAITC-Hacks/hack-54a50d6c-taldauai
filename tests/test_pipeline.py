@@ -121,7 +121,7 @@ class PipelineTests(unittest.TestCase):
             {**base, "description": "Проверить договор"},
             {**base, "source_segment_ids": ["s2"]},
             {**base, "assignee_name": "Данияр"}]}
-        tasks, _, warnings = _validate_extraction(raw, [{"id": "s1"}, {"id": "s2"}], [], date(2026, 9, 23))
+        tasks, _, warnings = _validate_extraction(raw, [{"id": "s1", "text": "завтра"}, {"id": "s2", "text": "завтра"}], [], date(2026, 9, 23))
         self.assertEqual(len(tasks), 4)
         self.assertEqual(len(warnings), 1)
         self.assertEqual([t["id"] for t in tasks], [f"task_{i:04d}" for i in range(1, 5)])
@@ -140,7 +140,7 @@ class PipelineTests(unittest.TestCase):
                 "assigner_speaker_id": "SPEAKER_00", "assignee_speaker_id": "SPEAKER_01",
                 "assignee_name": "Айдана", "due_text": "завтра"}]}
         speakers = [{"id": "SPEAKER_00"}, {"id": "SPEAKER_01", "display_name": None}]
-        segments = [{"id": "s1", "speaker_id": "SPEAKER_00"}]
+        segments = [{"id": "s1", "speaker_id": "SPEAKER_00", "text": "Айдана, отчёт завтра."}]
         tasks, _, _ = _validate_extraction(raw, segments, speakers, date(2026, 9, 23))
         self.assertTrue(tasks[0]["needs_review"])
         speakers[1]["display_name"] = "Айдана"

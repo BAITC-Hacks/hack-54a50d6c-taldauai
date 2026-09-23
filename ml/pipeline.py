@@ -565,6 +565,32 @@ def _validate_extraction(raw: dict, segments: list[dict], speakers: list[dict], 
                 in {"", "null", "none", "неизвестно", "белгісіз"}):
             due_text = None
         due_date = _resolve_due_date(item.get("due_date"), due_text, meeting_day)
+        deadline_repaired = False
+        if due_date:
+            evidence = " ".join(_normalized_quote(segment_by_id[s].get("text", ""))
+                                for s in source_ids)
+            quoted_deadline = _normalized_quote(due_text)
+            if not quoted_deadline or f" {quoted_deadline} " not in f" {evidence} ":
+                # Models sometimes translate a correct deadline between RU/KK.
+                # Recover only a literal span resolving to that same date;
+                # never search outside the task's cited evidence.
+                spans = []
+                for sid in source_ids:
+                    words = segment_by_id[sid].get("text", "").split()
+                    for width in range(1, min(10, len(words)) + 1):
+                        for start in range(len(words) - width + 1):
+                            span = " ".join(words[start:start + width]).strip(".,;:!?—– ")
+                            if _resolve_due_date(None, span, meeting_day) == due_date:
+                                spans.append(span)
+                        if spans:
+                            break
+                if spans:
+                    due_text = min(spans, key=lambda span: len(span.split()))
+                    deadline_repaired = True
+                    warnings.append(f"Task {index}: deadline wording recovered from transcript; review required")
+                else:
+                    due_date = None
+                    warnings.append(f"Task {index}: deadline wording is not in the cited transcript; date requires review")
         tasks.append({
             "id": f"task_{len(tasks)+1:04d}",
             "description": item["description"].strip(),
@@ -576,6 +602,7 @@ def _validate_extraction(raw: dict, segments: list[dict], speakers: list[dict], 
             "source_segment_ids": source_ids,
             "needs_review": (not (assignee_name and assignee_id and assigner_id and due_date)
                              or bool(raw.get("_review_failed"))
+                             or deadline_repaired
                              or confirmed_names.get(assignee_id) != assignee_name
                              or any(s.get("suggested_text") for s in segments if s["id"] in source_ids)),
         })
