@@ -177,6 +177,7 @@ export function MeetingPage() {
 
     <section className="td-section">
       <div className="td-section-head"><h2 className="section-title">Поручения <span className="ml-1 text-sm font-normal text-[#888]">{meeting.action_items.length}</span></h2><Button variant="outline" disabled={!isReady || busy} onClick={() => setTaskEditor('new')}>Добавить поручение</Button></div>
+      <p className="mb-3 text-xs text-[#777]">Для новых распознанных поручений срочность предлагается по сроку на день обработки: до 2 дней или просрочено — высокая, 3–7 дней — средняя, позже — низкая. Без срока — средняя. Проверьте её вместе с поручением; после изменения даты оценка сама не пересчитывается.</p>
       <div className="td-action-list">
         {meeting.action_items.map((action, index) => <article data-testid="action-item" key={action.id} className="td-action-row">
           <span className="td-action-index">{String(index + 1).padStart(2, '0')}</span>

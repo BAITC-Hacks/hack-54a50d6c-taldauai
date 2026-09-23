@@ -1,5 +1,6 @@
 import json
 import unittest
+from datetime import date
 from pathlib import Path
 
 from app.services.ml_adapter import adapt_ml_result
@@ -33,6 +34,24 @@ class MLAdapterTests(unittest.TestCase):
         self.result["warnings"] = ["Диаризация требует ручной проверки"]
         mapped = adapt_ml_result("meeting-test", self.result)
         self.assertEqual(mapped["warnings"], self.result["warnings"])
+
+    def test_deadline_priority_boundaries_still_require_human_review(self) -> None:
+        for deadline, expected in (("2026-09-22", "high"), ("2026-09-23", "high"),
+                                   ("2026-09-25", "high"), ("2026-09-26", "medium"),
+                                   ("2026-09-30", "medium"), ("2026-10-01", "low")):
+            with self.subTest(deadline=deadline):
+                self.result["tasks"][0]["due_date"] = deadline
+                action = adapt_ml_result("meeting-test", self.result, today=date(2026, 9, 23))["action_items"][0]
+                self.assertEqual(action["urgency"], expected)
+                self.assertTrue(action["needs_review"])
+                self.assertEqual(action["deadline_date"], deadline)
+
+    def test_missing_deadline_does_not_invent_date_or_high_priority(self) -> None:
+        self.result["tasks"][0]["due_date"] = None
+        action = adapt_ml_result("meeting-test", self.result, today=date(2026, 9, 23))["action_items"][0]
+        self.assertEqual(action["urgency"], "medium")
+        self.assertIsNone(action["deadline_date"])
+        self.assertTrue(action["needs_review"])
 
 
 if __name__ == "__main__":

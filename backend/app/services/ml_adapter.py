@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import json
 import sys
+from datetime import date, datetime
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from app.config import PROJECT_ROOT, settings
 
@@ -35,7 +37,18 @@ def run_ml_pipeline(
     )
 
 
-def adapt_ml_result(meeting_id: str, result: dict[str, Any]) -> dict[str, Any]:
+def _suggest_urgency(deadline: Any, today: date) -> str:
+    """Draft priority by days remaining; missing/invalid dates imply no urgency claim."""
+    if not isinstance(deadline, str):
+        return "medium"
+    try:
+        remaining = (date.fromisoformat(deadline) - today).days
+    except ValueError:
+        return "medium"
+    return "high" if remaining <= 2 else "medium" if remaining <= 7 else "low"
+
+
+def adapt_ml_result(meeting_id: str, result: dict[str, Any], *, today: date | None = None) -> dict[str, Any]:
     """Validate and map ML JSON v1 to backend persistence records."""
     if not isinstance(result, dict) or result.get("schema_version") != "1.0":
         raise ValueError("ML returned an unsupported result schema")
@@ -88,6 +101,7 @@ def adapt_ml_result(meeting_id: str, result: dict[str, Any]) -> dict[str, Any]:
             "auto_detected": not has_name,
         })
 
+    review_date = today if today is not None else datetime.now(ZoneInfo(settings.timezone)).date()
     action_items: list[dict[str, Any]] = []
     for index, item in enumerate(raw_tasks, start=1):
         if not isinstance(item, dict) or not isinstance(item.get("description"), str):
@@ -107,7 +121,7 @@ def adapt_ml_result(meeting_id: str, result: dict[str, Any]) -> dict[str, Any]:
             "deadline_raw": item.get("due_text") if isinstance(item.get("due_text"), str) else None,
             "deadline_date": item.get("due_date") if isinstance(item.get("due_date"), str) else None,
             "status": "in_progress",
-            "urgency": "medium",
+            "urgency": _suggest_urgency(item.get("due_date"), review_date),
             "quote": " ".join(segment["text"] for segment in source_segments),
             "timestamp": min(segment["start"] for segment in source_segments),
             # ML confidence is not human approval. Preserve the model's flag
