@@ -8,8 +8,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import tempfile
+import time
 from pathlib import Path
 
 from .pipeline import _convert_audio, _transcribe
@@ -36,6 +38,7 @@ def evaluate(manifest_path: str) -> dict:
     if not isinstance(entries, list) or not entries:
         raise ValueError("Manifest must contain a nonempty list")
     rows = []
+    started = time.monotonic()
     for item in entries:
         language = item["language"]
         if language not in {"ru", "kk", "mixed"}:
@@ -51,6 +54,8 @@ def evaluate(manifest_path: str) -> dict:
         prediction = _normalize(hypothesis)
         rows.append({"audio": item["audio"], "language": language,
                      "reference_chars": len(reference),
+                     "reference_words": len(reference.split()),
+                     "word_errors": _edit_distance(reference.split(), prediction.split()),
                      "character_errors": _edit_distance(reference, prediction),
                      "hypothesis": hypothesis})
     by_language = {}
@@ -59,15 +64,26 @@ def evaluate(manifest_path: str) -> dict:
         chars = sum(row["reference_chars"] for row in subset)
         errors = sum(row["character_errors"] for row in subset)
         by_language[language] = {"files": len(subset),
-                                 "cer": round(errors / chars, 4) if chars else None}
-    return {"by_language": by_language, "files": rows}
+                                 "cer": round(errors / chars, 4) if chars else None,
+                                 "wer": (round(sum(r["word_errors"] for r in subset) /
+                                               sum(r["reference_words"] for r in subset), 4)
+                                         if sum(r["reference_words"] for r in subset) else None)}
+    return {"engine": os.environ.get("TALDAU_ASR_ENGINE", "whisper"),
+            "model": os.environ.get("TALDAU_ASR_MODEL"),
+            "elapsed_seconds": round(time.monotonic() - started, 2),
+            "by_language": by_language, "files": rows}
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Evaluate local ASR by language")
     parser.add_argument("manifest", help="Local JSON manifest with reference transcripts")
+    parser.add_argument("--output", help="Save evaluation JSON locally")
     args = parser.parse_args()
-    print(json.dumps(evaluate(args.manifest), ensure_ascii=False, indent=2))
+    output = json.dumps(evaluate(args.manifest), ensure_ascii=False, indent=2)
+    if args.output:
+        Path(args.output).write_text(output + "\n", encoding="utf-8")
+    else:
+        print(output)
 
 
 if __name__ == "__main__":

@@ -9,6 +9,7 @@
 - Python 3.11 или 3.12, `ffmpeg` в `PATH`.
 - Зависимости из `requirements-ml.txt`.
 - Скачанная локально multilingual-модель `faster-whisper`.
+- Либо специализированный `alibiserikbay/kazakh-russian-mixed-stt` (ветка `asr/rukk`).
 - Скачанный локально pipeline `pyannote/speaker-diarization-community-1`.
 - Локальный Ollama с моделью `qwen2.5:7b` или другой моделью, дающей JSON по схеме.
 - Опционально: ISSAI KazLLM 8B GGUF4 для подсказок по исправлению смешанной
@@ -28,6 +29,7 @@ pip install huggingface_hub
 
 ```bash
 hf download Systran/faster-whisper-large-v3 --local-dir models/faster-whisper-large-v3
+hf download alibiserikbay/kazakh-russian-mixed-stt asr/rukk/model.pt asr/rukk/tokens.lst --local-dir models/mixed-stt
 hf auth login
 hf download pyannote/speaker-diarization-community-1 --local-dir models/speaker-diarization-community-1
 ollama pull qwen2.5:7b
@@ -42,6 +44,7 @@ hf download issai/LLama-3.1-KazLLM-1.0-8B-GGUF4 checkpoints_llama8b_031224_18900
 printf 'FROM %s\n' "$PWD/models/kazllm/checkpoints_llama8b_031224_18900-Q4_K_M.gguf" > models/kazllm/Modelfile
 ollama create taldau-kazllm -f models/kazllm/Modelfile
 export TALDAU_KAZLLM_MODEL=taldau-kazllm
+export TALDAU_LLM_MODEL=taldau-kazllm
 ```
 
 ISSAI распространяет KazLLM под CC-BY-NC-4.0 для некоммерческого применения;
@@ -55,10 +58,18 @@ ISSAI распространяет KazLLM под CC-BY-NC-4.0 для неком�
 
 ```bash
 export TALDAU_ASR_MODEL="$PWD/models/faster-whisper-large-v3"
+export TALDAU_ASR_ENGINE=whisper
 export TALDAU_DIARIZATION_MODEL="$PWD/models/speaker-diarization-community-1"
 export TALDAU_DEVICE=cpu  # на NVIDIA GPU с CUDA: cuda
 ollama serve
 ```
+
+Для специализированного ASR задайте `TALDAU_ASR_ENGINE=mixed-ctc` и
+`TALDAU_ASR_MODEL="$PWD/models/mixed-stt"`. Он использует greedy CTC без KenLM;
+таймкоды слов приблизительные, из акустических кадров. Whisper сохраняется как
+альтернатива. Сравнение на синтетических данных — в [ML_EVALUATION.md](ML_EVALUATION.md).
+Для поручений можно выбрать `TALDAU_LLM_MODEL=taldau-kazllm` после импорта KazLLM
+или `TALDAU_LLM_MODEL=qwen2.5:7b` для отдельно установленного Qwen.
 
 В другом терминале:
 
@@ -115,5 +126,6 @@ python -m ml.evaluate data/manifest.json
 Это помогает при смене языка между репликами, но качество смешанной речи
 внутри одной фразы надо проверить на записи; метрика пока не измерена.
 
-На текущем этапе на машине разработчика нет весов моделей и Ollama;
-полный прогон аудио здесь ещё не выполнен.
+На машине разработчика установлены ffmpeg, Ollama и Python-зависимости;
+распознавание Whisper и Mixed CTC выполнено на синтетических записях. Веса
+pyannote и KazLLM пока недоступны; полный прогон аудио с поручениями не выполнен.

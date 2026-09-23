@@ -10,12 +10,18 @@ import os
 import re
 import subprocess
 import tempfile
+import wave
 from datetime import date, datetime, timedelta
 from pathlib import Path
 from urllib.request import Request, urlopen
 
 
 SUPPORTED_AUDIO = {".wav", ".mp3", ".m4a", ".mp4", ".ogg", ".flac"}
+
+# Local inference must not upload diagnostics or attempt lazy weight downloads.
+os.environ["PYANNOTE_METRICS_ENABLED"] = "0"
+os.environ["HF_HUB_DISABLE_TELEMETRY"] = "1"
+os.environ["HF_HUB_OFFLINE"] = "1"
 
 
 def _meeting_date(value: str) -> date:
@@ -36,9 +42,16 @@ def _convert_audio(path: Path, destination: Path) -> None:
         raise RuntimeError("ffmpeg is required to decode audio") from exc
     except subprocess.CalledProcessError as exc:
         raise ValueError(f"Audio decoding failed: {exc.stderr.strip()}") from exc
+    except subprocess.TimeoutExpired as exc:
+        raise RuntimeError("Audio decoding timed out after 600 seconds") from exc
+    with wave.open(str(destination), "rb") as stream:
+        if stream.getnframes() == 0:
+            raise ValueError("Audio contains no samples")
 
 
 def _transcribe(path: Path) -> list[dict]:
+    import onnxruntime
+    onnxruntime.disable_telemetry_events()
     engine = os.environ.get("TALDAU_ASR_ENGINE", "whisper")
     if engine == "mixed-ctc":
         from .mixed_asr import transcribe
@@ -75,15 +88,17 @@ def _transcribe(path: Path) -> list[dict]:
 
 
 def _diarize(path: Path) -> list[dict]:
+    model_path = os.environ.get("TALDAU_DIARIZATION_MODEL")
+    if not model_path or not Path(model_path).is_dir():
+        raise RuntimeError("TALDAU_DIARIZATION_MODEL must point to a downloaded local pipeline")
     try:
         import torch
         from pyannote.audio import Pipeline
     except ImportError as exc:
         raise RuntimeError("Install pyannote.audio to identify speakers") from exc
-    model_path = os.environ.get("TALDAU_DIARIZATION_MODEL")
-    if not model_path or not Path(model_path).is_dir():
-        raise RuntimeError("TALDAU_DIARIZATION_MODEL must point to a downloaded local pipeline")
     pipeline = Pipeline.from_pretrained(model_path)
+    if pipeline is None:
+        raise RuntimeError("Could not load the local diarization pipeline")
     if os.environ.get("TALDAU_DEVICE") == "cuda":
         pipeline.to(torch.device("cuda"))
     output = pipeline(str(path))
@@ -227,6 +242,12 @@ def _resolve_due_date(value: str | None, due_text: str | None, meeting_day: date
     if not due_text:
         return None
     text = due_text.lower().strip()
+    if re.fullmatch(r"(?:до |к )?(?:завтра|ертең|ертеңге дейін)", text):
+        return (meeting_day + timedelta(days=1)).isoformat()
+    if text in {"сегодня", "до конца дня", "бүгін", "бүгінге дейін"}:
+        return meeting_day.isoformat()
+    if re.search(r"\b(после|келесі|следующ)", text):
+        return None
     # Keep the model's candidate only when the original words contain the date.
     # This prevents an invented date for phrases such as "after approval".
     iso_match = re.search(r"\b\d{4}-\d{2}-\d{2}\b", text)
@@ -242,14 +263,17 @@ def _resolve_due_date(value: str | None, due_text: str | None, meeting_day: date
         try:
             result = date(year, month, day)
             if not match[3] and result < meeting_day:
-                result = date(year + 1, month, day)
+                return None
             return result.isoformat()
         except ValueError:
             return None
     months = {"январ": 1, "феврал": 2, "март": 3, "апрел": 4,
               "мая": 5, "май": 5, "июн": 6, "июл": 7, "август": 8,
-              "сентябр": 9, "октябр": 10, "ноябр": 11, "декабр": 12}
-    match = re.search(r"\b(\d{1,2})\s+([а-яё]+)(?:\s+(\d{4}))?\b", text)
+              "сентябр": 9, "октябр": 10, "ноябр": 11, "декабр": 12,
+              "қаңтар": 1, "ақпан": 2, "наурыз": 3, "сәуір": 4, "мамыр": 5,
+              "маусым": 6, "шілде": 7, "тамыз": 8, "қыркүйек": 9,
+              "қазан": 10, "қараша": 11, "желтоқсан": 12}
+    match = re.search(r"\b(\d{1,2})\s+([^\W\d_]+)(?:\s+(\d{4}))?\b", text)
     if match:
         month = next((number for name, number in months.items() if match[2].startswith(name)), None)
         if month:
@@ -257,7 +281,7 @@ def _resolve_due_date(value: str | None, due_text: str | None, meeting_day: date
             try:
                 result = date(year, month, int(match[1]))
                 if not match[3] and result < meeting_day:
-                    result = date(year + 1, month, int(match[1]))
+                    return None
                 return result.isoformat()
             except ValueError:
                 return None
@@ -266,10 +290,8 @@ def _resolve_due_date(value: str | None, due_text: str | None, meeting_day: date
                 "дүйсенб": 0, "сейсенб": 1, "сәрсенб": 2,
                 "бейсенб": 3, "жұма": 4, "сенб": 5, "жексенб": 6}
     for name, number in weekdays.items():
-        if name in text:
+        if re.search(r"\b" + name, text):
             days = (number - meeting_day.weekday()) % 7
-            if days == 0:
-                days = 7
             return (meeting_day + timedelta(days=days)).isoformat()
     # A candidate from the LLM is deliberately ignored when the source wording
     # cannot be resolved by these rules. The reviewer sees due_text instead.
@@ -297,9 +319,9 @@ def _validate_extraction(raw: dict, segments: list[dict], speakers: list[dict], 
             assignee_name = None
         assignee_id = item.get("assignee_speaker_id")
         assigner_id = item.get("assigner_speaker_id")
-        if assignee_id not in valid_speakers:
+        if not isinstance(assignee_id, str) or assignee_id not in valid_speakers:
             assignee_id = None
-        if assigner_id not in valid_speakers:
+        if not isinstance(assigner_id, str) or assigner_id not in valid_speakers:
             assigner_id = None
         due_text = item.get("due_text")
         if not isinstance(due_text, str) or not due_text.strip():
@@ -314,7 +336,8 @@ def _validate_extraction(raw: dict, segments: list[dict], speakers: list[dict], 
             "due_date": due_date,
             "due_text": due_text,
             "source_segment_ids": source_ids,
-            "needs_review": not (assignee_name and assignee_id and due_date),
+            "needs_review": (not (assignee_name and assignee_id and assigner_id and due_date)
+                             or any(s.get("suggested_text") for s in segments if s["id"] in source_ids)),
         })
     return tasks, raw["summary"].strip(), warnings
 

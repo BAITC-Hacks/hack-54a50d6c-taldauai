@@ -6,8 +6,9 @@
 который backend может показать секретарю для проверки и экспортировать в документ.
 
 **Текущий статус:** ML-модуль и CLI реализованы, автоматические проверки логики
-проходят. Полный сценарий с аудио пока не проверен: на этой машине ещё не
-установлены веса моделей и Ollama. Backend, интерфейс и экспорт в
+проходят. ASR проверен на пяти синтетических записях:
+[результаты и повторение](ML_EVALUATION.md). Полный сценарий пока не проверен:
+на этой машине ещё не доступны веса pyannote и KazLLM. Backend, интерфейс и экспорт в
 текущей ветке отсутствуют. Не используйте неподтверждённые поручения для
 автоматических уведомлений.
 
@@ -16,6 +17,8 @@
 - Приём локального аудиофайла WAV/MP3/M4A/MP4/OGG/FLAC.
 - Локальное декодирование через `ffmpeg`, распознавание через `faster-whisper`,
   диаризация через `pyannote.audio`.
+- Специализированный Mixed CTC ASR для русско-казахской речи, переключаемый
+  через `TALDAU_ASR_ENGINE`.
 - Совмещение реплик с голосами по временным интервалам.
 - Извлечение поручений и саммари через локальный Ollama с проверкой структуры
   JSON, ссылок на исходные реплики и календарных сроков.
@@ -37,7 +40,8 @@ Backend отвечает за загрузку и хранение файлов,
 ## Установка и запуск ML-части
 
 Нужны Python 3.11/3.12, `ffmpeg`, локально скачанные веса ASR и диаризации,
-Ollama с моделью `qwen2.5:7b`. На Linux с NVIDIA GPU можно установить CUDA и
+Ollama с импортированной KazLLM (`taldau-kazllm`) или `qwen2.5:7b`.
+На Linux с NVIDIA GPU можно установить CUDA и
 задать `TALDAU_DEVICE=cuda`; на macOS MVP работает на CPU.
 
 ```bash
@@ -50,9 +54,11 @@ pip install -r requirements-ml.txt
 [ML_RUN.md](ML_RUN.md). После загрузки весов и запуска Ollama:
 
 ```bash
-export TALDAU_ASR_MODEL="$PWD/models/faster-whisper-large-v3"
+export TALDAU_ASR_ENGINE=mixed-ctc
+export TALDAU_ASR_MODEL="$PWD/models/mixed-stt"
 export TALDAU_DIARIZATION_MODEL="$PWD/models/speaker-diarization-community-1"
 export TALDAU_DEVICE=cpu
+export TALDAU_LLM_MODEL=taldau-kazllm
 python -m ml ./data/meeting.wav --started-at '2026-09-23T14:00:00+05:00' --output ./data/result.json
 ```
 
@@ -71,8 +77,8 @@ python3.11 -m ml --help
 После установки моделей запишите короткое тестовое совещание с двумя голосами
 и поручением с явным сроком. Запустите команду выше, откройте `result.json` и
 сверьте `segments`, `tasks`, `source_segment_ids` и `summary` с записью.
-Отдельно проверьте русский, казахский и смешанную речь. Качество на этих языках
-пока не измерено. Для смешанной речи есть отдельная команда оценки CER:
+Отдельно проверьте русский, казахский и смешанную речь. Качество на живых
+записях пока не измерено. Для смешанной речи есть отдельная команда оценки CER/WER:
 `python -m ml.evaluate data/manifest.json`; формат файла описан в
 [ML_RUN.md](ML_RUN.md).
 
@@ -84,6 +90,7 @@ python3.11 -m ml --help
 Веса требуется скачать заранее. Выбранные компоненты:
 [faster-whisper](https://github.com/SYSTRAN/faster-whisper),
 [pyannote.audio](https://github.com/pyannote/pyannote-audio),
+[Mixed STT](https://huggingface.co/alibiserikbay/kazakh-russian-mixed-stt) (Apache-2.0),
 [Qwen2.5 7B через Ollama](https://ollama.com/library/qwen2.5:7b),
 [ISSAI KazLLM 8B](https://huggingface.co/issai/LLama-3.1-KazLLM-1.0-8B-GGUF4)
 (необязателен, лицензия CC-BY-NC-4.0).
