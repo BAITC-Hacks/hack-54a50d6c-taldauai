@@ -61,7 +61,7 @@ export TALDAU_ASR_MODEL="$PWD/models/faster-whisper-large-v3"
 export TALDAU_ASR_ENGINE=whisper
 export TALDAU_DIARIZATION_MODEL="$PWD/models/speaker-diarization-community-1"
 export TALDAU_DEVICE=cpu  # на NVIDIA GPU с CUDA: cuda
-ollama serve
+OLLAMA_NO_CLOUD=1 ollama serve
 ```
 
 Для специализированного ASR задайте `TALDAU_ASR_ENGINE=mixed-ctc` и
@@ -131,5 +131,6 @@ python -m ml.evaluate data/manifest.json
 внутри одной фразы надо проверить на записи; метрика пока не измерена.
 
 На машине разработчика установлены ffmpeg, Ollama и Python-зависимости;
-распознавание Whisper и Mixed CTC выполнено на синтетических записях. Веса
-pyannote и KazLLM пока недоступны; полный прогон аудио с поручениями не выполнен.
+скачаны Whisper, Mixed CTC, pyannote и KazLLM. Сквозной запуск выполнен на
+синтетической записи. Ошибки диаризации и поручений описаны в
+[ML_EVALUATION.md](ML_EVALUATION.md); качество живой речи ещё не измерено.

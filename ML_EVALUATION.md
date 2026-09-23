@@ -49,8 +49,22 @@ Silero из faster-whisper. Время 2,37 с и 72,82 с в отчётах в�
 - Точность диаризации и привязки ответственного к голосу.
 - Поручения и саммари KazLLM с доступными локальными весами.
 
-Полный сценарий аудио → диаризация → LLM → JSON ещё не выполнен:
-pyannote уже загружена и запускается, KazLLM загружается.
+Полный сценарий аудио → диаризация → KazLLM → JSON выполнен локально.
+Результат: `examples/results/meeting_result.json`. На сценарии из двух поручений
+получены три: подтверждение проверки договора выделено как отдельное поручение
+с искажённым именем. Сроки завтра / пятница нормализованы в 24 / 25 сентября.
+Все поручения помечены `needs_review: true`. Текстовая подсказка KazLLM
+не устранила ключевые ошибки ASR. Это успешный запуск программы, но не
+успешная проверка качества поручений.
+
+```bash
+TALDAU_ASR_ENGINE=mixed-ctc TALDAU_ASR_MODEL=models/mixed-stt \
+TALDAU_DIARIZATION_MODEL=models/speaker-diarization-community-1 \
+TALDAU_LLM_MODEL=taldau-kazllm TALDAU_KAZLLM_MODEL=taldau-kazllm \
+  .venv/bin/python -m ml examples/audio/meeting_demo.wav \
+  --started-at '2026-09-23T14:00:00+05:00' --num-speakers 2 --output data/meeting_result.json
+```
+
 На коротком двухголосном TTS-примере `examples/audio/meeting_demo.wav`
 pyannote ошибается: без подсказки обнаруживает один голос, с `num_speakers=2`
 разделяет запись на два кластера, но их границы не совпадают с истинной сменой
