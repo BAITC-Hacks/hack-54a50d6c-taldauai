@@ -16,7 +16,7 @@ from pathlib import Path
 from urllib.request import Request, urlopen
 
 
-SUPPORTED_AUDIO = {".wav", ".mp3", ".m4a", ".mp4", ".ogg", ".flac"}
+SUPPORTED_AUDIO = {".wav", ".mp3", ".m4a", ".mp4", ".ogg", ".flac", ".webm", ".opus", ".aac"}
 
 # Local inference must not upload diagnostics or attempt lazy weight downloads.
 os.environ["PYANNOTE_METRICS_ENABLED"] = "0"
@@ -49,11 +49,14 @@ def _convert_audio(path: Path, destination: Path) -> None:
             raise ValueError("Audio contains no samples")
 
 
-def _transcribe(path: Path) -> list[dict]:
+def _transcribe(path: Path, *, language: str | None = None,
+                hotwords: str | None = None) -> list[dict]:
     import onnxruntime
     onnxruntime.disable_telemetry_events()
     engine = os.environ.get("TALDAU_ASR_ENGINE", "whisper")
     if engine == "mixed-ctc":
+        if language not in {None, "ru", "kk"} or hotwords:
+            raise ValueError("Mixed CTC supports ru/kk only and no hotwords; select whisper for other languages or terminology hints")
         from .mixed_asr import transcribe
         return transcribe(path, os.environ.get("TALDAU_ASR_MODEL", ""), os.environ.get("TALDAU_DEVICE", "cpu"))
     if engine != "whisper":
@@ -69,9 +72,10 @@ def _transcribe(path: Path) -> list[dict]:
     compute_type = "float16" if device == "cuda" else "int8"
     model = WhisperModel(model_path, device=device, compute_type=compute_type, local_files_only=True)
     result, _ = model.transcribe(
-        str(path), task="transcribe", language=None, vad_filter=True,
-        word_timestamps=True, beam_size=5, multilingual=True,
+        str(path), task="transcribe", language=language, vad_filter=True,
+        word_timestamps=True, beam_size=5, multilingual=language is None,
         condition_on_previous_text=False,
+        hotwords=hotwords,
     )
     segments = []
     for item in result:
@@ -133,7 +137,7 @@ def _combine(asr: list[dict], turns: list[dict]) -> tuple[list[dict], list[dict]
         duration = max(1, item["end_ms"] - item["start_ms"])
         ranked = sorted(overlaps.values(), reverse=True)
         if (best is not None and overlaps[best] >= duration * 0.5
-                and (len(ranked) < 2 or ranked[0] > ranked[1])):
+                and (len(ranked) < 2 or ranked[1] < duration * 0.2)):
             return speaker_ids[best]
         return None
 
@@ -141,7 +145,8 @@ def _combine(asr: list[dict], turns: list[dict]) -> tuple[list[dict], list[dict]
         current = None
         for word in item.get("words") or [item]:
             speaker_id = speaker_for(word)
-            if current and current["speaker_id"] == speaker_id:
+            if (current and current["speaker_id"] == speaker_id
+                    and word["start_ms"] - current["end_ms"] < 800):
                 current["text"] += " " + word["text"]
                 current["end_ms"] = word["end_ms"]
             else:
@@ -193,6 +198,8 @@ def _kazllm_suggestions(segments: list[dict]) -> list[str]:
         )
         try:
             response = _ollama_chat(model, prompt, schema)
+            if not isinstance(response, dict):
+                raise ValueError("KazLLM returned a non-object result")
             proposals = response["segments"]
             if (not isinstance(proposals, list) or len(proposals) != len(batch)
                     or any(not isinstance(p, dict) or p.get("id") != s["id"]
@@ -310,8 +317,10 @@ def _resolve_due_date(value: str | None, due_text: str | None, meeting_day: date
 def _validate_extraction(raw: dict, segments: list[dict], speakers: list[dict], meeting_day: date) -> tuple[list[dict], str, list[str]]:
     if not isinstance(raw, dict) or not isinstance(raw.get("tasks"), list) or not isinstance(raw.get("summary"), str):
         raise ValueError("LLM returned an invalid result")
-    valid_segments = {s["id"] for s in segments}
+    segment_by_id = {s["id"]: s for s in segments}
+    valid_segments = set(segment_by_id)
     valid_speakers = {s["id"] for s in speakers}
+    confirmed_names = {s["id"]: s.get("display_name") for s in speakers}
     tasks = []
     warnings = []
     for index, item in enumerate(raw["tasks"], 1):
@@ -332,6 +341,10 @@ def _validate_extraction(raw: dict, segments: list[dict], speakers: list[dict], 
             assignee_id = None
         if not isinstance(assigner_id, str) or assigner_id not in valid_speakers:
             assigner_id = None
+        source_speakers = {segment_by_id[s].get("speaker_id") for s in source_ids}
+        if assigner_id is not None and assigner_id not in source_speakers:
+            warnings.append(f"Task {index}: assigner is not a speaker in the cited segments")
+            assigner_id = None
         due_text = item.get("due_text")
         if not isinstance(due_text, str) or not due_text.strip():
             due_text = None
@@ -346,19 +359,39 @@ def _validate_extraction(raw: dict, segments: list[dict], speakers: list[dict], 
             "due_text": due_text,
             "source_segment_ids": source_ids,
             "needs_review": (not (assignee_name and assignee_id and assigner_id and due_date)
+                             or confirmed_names.get(assignee_id) != assignee_name
                              or any(s.get("suggested_text") for s in segments if s["id"] in source_ids)),
         })
-    return tasks, raw["summary"].strip(), warnings
+    # Only merge identical task facts with shared evidence. Similar wording alone
+    # is insufficient: recurring tasks and different recipients must survive.
+    unique = []
+    for task in tasks:
+        fields = ("description", "assignee_name", "assignee_speaker_id", "assigner_speaker_id", "due_date", "due_text")
+        duplicate = next((t for t in unique if all(t[k] == task[k] for k in fields)
+                          and set(t["source_segment_ids"]) & set(task["source_segment_ids"])), None)
+        if duplicate is not None:
+            duplicate["source_segment_ids"] = list(dict.fromkeys(duplicate["source_segment_ids"] + task["source_segment_ids"]))
+            duplicate["needs_review"] |= task["needs_review"]
+            warnings.append("Merged an identical task with overlapping source evidence")
+        else:
+            task["id"] = f"task_{len(unique)+1:04d}"
+            unique.append(task)
+    return unique, raw["summary"].strip(), warnings
 
 
 def process_meeting(audio_path: str, meeting_started_at: str,
                     speaker_names: dict[str, str] | None = None,
-                    *, num_speakers: int | None = None) -> dict:
+                    *, num_speakers: int | None = None,
+                    language: str | None = None, hotwords: str | None = None) -> dict:
     """Process a local recording and return JSON-serializable protocol v1.
 
     Raises ValueError for bad input and RuntimeError for unavailable local models.
     """
     meeting_day = _meeting_date(meeting_started_at)
+    if language is not None and (not isinstance(language, str) or not re.fullmatch(r"[a-z]{2,3}", language)):
+        raise ValueError("language must be a language code such as ru, kk, en, or None for automatic detection")
+    if hotwords is not None and (not isinstance(hotwords, str) or len(hotwords) > 1000):
+        raise ValueError("hotwords must be a string of at most 1000 characters")
     if num_speakers is not None and (type(num_speakers) is not int or not 1 <= num_speakers <= 32):
         raise ValueError("num_speakers must be between 1 and 32")
     source = Path(audio_path).expanduser().resolve()
@@ -369,8 +402,8 @@ def process_meeting(audio_path: str, meeting_started_at: str,
     with tempfile.TemporaryDirectory(prefix="taldau-ml-") as tmp:
         wav_path = Path(tmp) / "audio.wav"
         _convert_audio(source, wav_path)
-        asr = _transcribe(wav_path)
-        turns = _diarize(wav_path, num_speakers)
+        asr = _transcribe(wav_path, language=language, hotwords=hotwords)
+        turns = _diarize(wav_path, num_speakers) if asr else []
     segments, speakers = _combine(asr, turns)
     for speaker in speakers:
         speaker["display_name"] = (speaker_names or {}).get(speaker["id"])
@@ -379,6 +412,8 @@ def process_meeting(audio_path: str, meeting_started_at: str,
         raw = _extract(segments, meeting_started_at, speakers)
         tasks, summary, warnings = _validate_extraction(raw, segments, speakers, meeting_day)
         warnings = correction_warnings + warnings
+        if any(s["speaker_id"] is None for s in segments):
+            warnings.append("Some speech has no reliable speaker assignment; review overlapping voices and diarization")
     else:
         tasks, summary, warnings = [], "", ["Речь в записи не обнаружена"]
     return {"schema_version": "1.0", "meeting_started_at": meeting_started_at,

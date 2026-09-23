@@ -1,0 +1,36 @@
+{
+  "engine": "mixed-ctc",
+  "model": "models/mixed-stt",
+  "language": null,
+  "hotwords": null,
+  "ctc_beam_size": 1,
+  "elapsed_seconds": 1.98,
+  "by_language": {
+    "ru": {
+      "files": 0,
+      "cer": null,
+      "wer": null
+    },
+    "kk": {
+      "files": 0,
+      "cer": null,
+      "wer": null
+    },
+    "mixed": {
+      "files": 1,
+      "cer": 0.0292,
+      "wer": 0.1304
+    }
+  },
+  "files": [
+    {
+      "audio": "audio/meeting_demo.wav",
+      "language": "mixed",
+      "reference_chars": 171,
+      "reference_words": 23,
+      "word_errors": 3,
+      "character_errors": 5,
+      "hypothesis": "мен айданамын данияр ертең договорды тексеріп заметань жіберіңіз яданир договор проверю завтра айдана подготовьте отчёт до пятницы жақсы есепті жұмаға дейін дайындаймын"
+    }
+  ]
+}
