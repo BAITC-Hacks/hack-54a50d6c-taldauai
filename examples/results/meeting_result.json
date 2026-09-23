@@ -1,0 +1,78 @@
+{
+  "schema_version": "1.0",
+  "meeting_started_at": "2026-09-23T14:00:00+05:00",
+  "status": "completed",
+  "speakers": [
+    {
+      "id": "SPEAKER_00",
+      "display_name": null
+    },
+    {
+      "id": "SPEAKER_01",
+      "display_name": null
+    }
+  ],
+  "segments": [
+    {
+      "id": "seg_0001",
+      "start_ms": 80,
+      "end_ms": 10939,
+      "text": "мен айданамын данияр ертең договорды тексеріп заметань жіберіңіз яданир договор проверю завтра айдана подготовьте отчёт до пятницы",
+      "speaker_id": "SPEAKER_00",
+      "language": null,
+      "suggested_text": "Мен айданамын Данияр, ертең договорды тексеріп, заметань жіберіңіз, Яданир, договор проверю завтра, айдана подготовьте отчёт до пятницы"
+    },
+    {
+      "id": "seg_0002",
+      "start_ms": 11703,
+      "end_ms": 14263,
+      "text": "жақсы есепті жұмаға дейін дайындаймын",
+      "speaker_id": "SPEAKER_01",
+      "language": null,
+      "suggested_text": "Жақсы, есепті жұмаға дейін дайындаймын"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "task_0001",
+      "description": "проверьте договор завтра и отправьте заметку",
+      "assignee_name": "Данияр",
+      "assignee_speaker_id": "SPEAKER_00",
+      "assigner_speaker_id": null,
+      "due_date": "2026-09-24",
+      "due_text": "завтра",
+      "source_segment_ids": [
+        "seg_0001"
+      ],
+      "needs_review": true
+    },
+    {
+      "id": "task_0002",
+      "description": "проверьте договор завтра",
+      "assignee_name": "Яданир",
+      "assignee_speaker_id": null,
+      "assigner_speaker_id": null,
+      "due_date": "2026-09-24",
+      "due_text": "завтра",
+      "source_segment_ids": [
+        "seg_0001"
+      ],
+      "needs_review": true
+    },
+    {
+      "id": "task_0003",
+      "description": "подготовьте отчет до пятницы",
+      "assignee_name": "Айдана",
+      "assignee_speaker_id": null,
+      "assigner_speaker_id": null,
+      "due_date": "2026-09-25",
+      "due_text": "до пятницы",
+      "source_segment_ids": [
+        "seg_0001"
+      ],
+      "needs_review": true
+    }
+  ],
+  "summary": "Данияр, проверьте договор завтра и отправьте заметку. Яданир, проверьте договор завтра. Айдана, подготовьте отчет до пятницы.",
+  "warnings": []
+}
